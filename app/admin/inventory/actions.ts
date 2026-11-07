@@ -2,8 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { revalidateShop } from "../../../lib/admin/revalidate-shop";
-import { revalidateShop } from "../../../lib/admin/revalidate-shop";
-import { revalidateShop } from "../../../lib/admin/revalidate-shop";
 import { requireAnyPermission } from "../../../lib/admin/access";
 import { createClient } from "../../../lib/supabase/server";
 
@@ -59,8 +57,6 @@ export async function adjustStock(_prev: AdjustState, fd: FormData): Promise<Adj
   }
   revalidatePath("/admin/inventory");
   revalidatePath("/admin/products");
-  revalidateShop();
-  revalidateShop();
   revalidateShop();
   return { ok: "تم تسجيل الحركة.", n: Date.now() };
 }

@@ -5,6 +5,7 @@ import { createClient } from "../../../../lib/supabase/server";
 import { fmtIQD, fmtNum } from "../../../../lib/admin/fmt";
 import { PageHead, Panel, Badge, Empty } from "../../_components/ui";
 import { ProductForm, type ProductInit } from "../_components/ProductForm";
+import { VisibilityButton } from "../_components/VisibilityButton";
 import { ImageUploadForm, VariantForm, type VariantInit } from "../_components/MediaForms";
 import { setPrimaryImage, deleteImage, toggleVariant } from "../media-actions";
 
@@ -14,7 +15,7 @@ export default async function Page({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ v?: string }>;
+  searchParams: Promise<{ v?: string; partial?: string }>;
 }) {
   await requireAnyPermission(["products"]);
   const { id } = await params;
@@ -22,7 +23,7 @@ export default async function Page({
   const sb = await createClient();
   const [pr, cr, cat, im, vr] = await Promise.all([
     sb.from("products")
-      .select("id,name,category_id,brand,description,barcode,price,quantity,low_stock_threshold,status,is_featured,is_new")
+      .select("id,slug,name,category_id,brand,description,barcode,price,quantity,low_stock_threshold,status,is_featured,is_new")
       .eq("id", id)
       .maybeSingle(),
     sb.from("product_costs").select("cost_price").eq("product_id", id).maybeSingle(),
@@ -45,8 +46,24 @@ export default async function Page({
       <PageHead
         title="تعديل المنتج"
         desc={pr.data.name}
-        actions={<Link className="ds-btn" href="/admin/products">رجوع للمنتجات</Link>}
+        actions={
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
+            {pr.data.status === "hidden" ? <Badge tone="warn">مخفي (مسودة)</Badge>
+              : pr.data.status === "sold_out" ? <Badge tone="info">نفدت الكمية (ظاهر)</Badge>
+              : <Badge tone="good">ظاهر للزبائن</Badge>}
+            <VisibilityButton id={id} status={pr.data.status} />
+            {pr.data.status !== "hidden" ? <Link className="ds-btn" href={`/product/${pr.data.slug}`}>عرض في المتجر</Link> : null}
+            <Link className="ds-btn" href="/admin/products">رجوع للمنتجات</Link>
+          </div>
+        }
       />
+      {sp.partial ? (
+        <Panel>
+          <p role="alert" style={{ color: "var(--c-warn, #B45309)", fontWeight: 600 }}>
+            حُفظ المنتج لكن لم تكتمل الكمية أو التكلفة. راجعهما أدناه واحفظ مرة أخرى.
+          </p>
+        </Panel>
+      ) : null}
       <Panel title="بيانات المنتج">
         <ProductForm categories={cat.data ?? []} product={pr.data as ProductInit} cost={cr.data?.cost_price ?? null} />
       </Panel>

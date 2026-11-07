@@ -184,7 +184,7 @@ export function ProductForm({
           <div className="ds-form">
             <div>
               <label className="ds-label" htmlFor="price">سعر البيع (د.ع)</label>
-              <input className="ds-input" id="price" name="price" type="number" min={0} inputMode="numeric" defaultValue={p?.price ?? 0} />
+              <input className="ds-input" id="price" name="price" type="number" min={0} inputMode="numeric" defaultValue={p?.price ?? ""} />
             </div>
             <div>
               <label className="ds-label" htmlFor="cost_price">سعر التكلفة (د.ع)</label>
@@ -230,15 +230,9 @@ export function ProductForm({
 
       {pane(5, (
         <>
-          <div className="ds-form">
-            <div>
-              <label className="ds-label" htmlFor="status">الحالة</label>
-              <select className="ds-select" id="status" name="status" defaultValue={p ? (p.status === "hidden" ? "hidden" : "active") : "hidden"}>
-                <option value="active">نشط (يظهر في المتجر)</option>
-                <option value="hidden">مخفي</option>
-              </select>
-            </div>
-          </div>
+          <Note>
+          {p ? "حالة الظهور تُدار من زر «نشر / إخفاء» أعلى الصفحة." : "يُحفظ المنتج كمسودة (مخفي). بعد إضافة الصور من صفحته تنشره بزر «نشر المنتج»."}
+        </Note>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginTop: 14 }}>
             <label style={{ display: "flex", gap: 8, alignItems: "center", color: "var(--c-text, #17140F)" }}>
               <input type="checkbox" name="is_featured" defaultChecked={p?.is_featured} /> منتج مميز
@@ -254,6 +248,8 @@ export function ProductForm({
         <p role="alert" style={{ color: "var(--c-bad, #B91C1C)", marginTop: 14, fontWeight: 600 }}>{shownError}</p>
       ) : null}
 
+      {state.ok ? <p role="status" style={{ color: "var(--c-good, #15803D)", marginTop: 14, fontWeight: 600 }}>{state.ok}</p> : null}
+
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 20 }}>
         {step > 0 ? (
           <button type="button" className="ds-btn" onClick={() => go(step - 1)}><ChevronRight size={16} /> السابق</button>
@@ -262,7 +258,7 @@ export function ProductForm({
           <button type="button" className="ds-btn ds-btn-gold" onClick={() => go(step + 1)}>التالي <ChevronLeft size={16} /></button>
         ) : (
           <button type="submit" className="ds-btn ds-btn-gold" disabled={pending}>
-            <Check size={16} /> {pending ? "جارٍ الحفظ..." : p ? "حفظ التعديلات" : "إضافة المنتج"}
+            <Check size={16} /> {pending ? "جارٍ الحفظ..." : p ? "حفظ التعديلات" : "حفظ كمسودة"}
           </button>
         )}
         <Link className="ds-btn" href="/admin/products">إلغاء</Link>
