@@ -119,7 +119,6 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
     <section>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
         <h1 className="qs-h1">إدارة الطلبات</h1>
-        <Link className="ao-btn ao-btn-line" href="/admin/orders">رجوع</Link>
       </div>
 
       <nav className="ao-tabs" aria-label="تصنيف الطلبات">

@@ -31,7 +31,6 @@ export default async function LiveOrdersPage() {
         actions={
           <>
             <Link className="ds-btn" href="/admin/orders/manage">إدارة الطلبات</Link>
-            <Link className="ds-btn" href="/admin/orders">رجوع</Link>
           </>
         }
       />

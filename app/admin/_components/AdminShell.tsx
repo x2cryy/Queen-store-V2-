@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Bell, Boxes, CalendarClock, ChevronDown, ChartColumn, ChevronLeft, History, House, LogOut, Megaphone,
+  Bell, Boxes, ListChecks, Radio, CalendarClock, ChevronDown, ChartColumn, ChevronLeft, History, House, LogOut, Megaphone,
   Menu, MessageCircle, Package, Palette, Receipt, Search, Settings,
   ShieldCheck, Store, UserRound, Users, Wallet, X,
 } from "lucide-react";
@@ -16,7 +16,7 @@ import { NAV_ITEMS } from "./nav";
 const ICONS: Record<string, typeof House> = {
   home: House, user: UserRound, store: Store, calendar: CalendarClock, package: Package, boxes: Boxes, receipt: Receipt, wallet: Wallet,
   chat: MessageCircle, users: Users, megaphone: Megaphone, palette: Palette,
-  chart: ChartColumn, settings: Settings, shield: ShieldCheck, history: History,
+  chart: ChartColumn, settings: Settings, shield: ShieldCheck, history: History, radio: Radio, listchecks: ListChecks,
 };
 
 type Child = { href: string; label: string; icon: string; match?: string[] };

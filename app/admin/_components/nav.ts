@@ -20,7 +20,16 @@ export type NavItem = {
 export const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "الرئيسية", icon: "home", perms: ["dashboard"] },
   { href: "/admin/inventory", label: "المخزون", icon: "boxes", perms: ["products", "inventory"] },
-  { href: "/admin/orders", label: "الطلبات", icon: "receipt", perms: ["orders"] },
+  {
+    href: "/admin/orders",
+    label: "الطلبات",
+    icon: "receipt",
+    perms: ["orders"],
+    children: [
+      { href: "/admin/orders/live", label: "الطلبات المباشرة", icon: "radio", perms: ["orders"] },
+      { href: "/admin/orders/manage", label: "إدارة الطلبات", icon: "listchecks", perms: ["orders"] },
+    ],
+  },
   { href: "/admin/payments", label: "تحويلات Qi Card", icon: "wallet", perms: ["orders"] },
   {
     href: "/admin/debts",
