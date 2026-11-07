@@ -6,8 +6,9 @@ import { fmtIQD, fmtNum } from "../../../../lib/admin/fmt";
 import { PageHead, Panel, Badge, Empty } from "../../_components/ui";
 import { ProductForm, type ProductInit } from "../_components/ProductForm";
 import { VisibilityButton } from "../_components/VisibilityButton";
-import { ImageUploadForm, VariantForm, type VariantInit } from "../_components/MediaForms";
-import { setPrimaryImage, deleteImage, toggleVariant } from "../media-actions";
+import { VariantForm, type VariantInit } from "../_components/MediaForms";
+import { ImageUploader } from "../_components/ImageUploader";
+import { setPrimaryImage, deleteImage, toggleVariant, moveImage } from "../media-actions";
 
 type Img = { id: string; storage_path: string; is_primary: boolean };
 
@@ -88,6 +89,20 @@ export default async function Page({
                       <button className="ds-btn" style={{ width: "100%", height: 34 }} type="submit">جعلها رئيسية</button>
                     </form>
                   )}
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <form action={moveImage} style={{ flex: 1 }}>
+                      <input type="hidden" name="product_id" value={id} />
+                      <input type="hidden" name="id" value={m.id} />
+                      <input type="hidden" name="dir" value="-1" />
+                      <button className="ds-btn" style={{ width: "100%", height: 34 }} type="submit">تقديم</button>
+                    </form>
+                    <form action={moveImage} style={{ flex: 1 }}>
+                      <input type="hidden" name="product_id" value={id} />
+                      <input type="hidden" name="id" value={m.id} />
+                      <input type="hidden" name="dir" value="1" />
+                      <button className="ds-btn" style={{ width: "100%", height: 34 }} type="submit">تأخير</button>
+                    </form>
+                  </div>
                   <form action={deleteImage}>
                     <input type="hidden" name="product_id" value={id} />
                     <input type="hidden" name="id" value={m.id} />
@@ -98,7 +113,7 @@ export default async function Page({
             ))}
           </div>
         )}
-        <ImageUploadForm productId={id} />
+        <ImageUploader productId={id} />
       </Panel>
 
       <Panel title="المتغيرات (اللون / المقاس)">

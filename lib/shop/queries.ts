@@ -26,11 +26,11 @@ type Row = {
   quantity: number;
   status: string;
   product_images?: { storage_path: string; sort_order: number; is_primary: boolean }[] | null;
-  product_variants?: { is_active: boolean; quantity: number; track_quantity: boolean }[] | null;
+  product_variants?: { is_active: boolean; quantity: number; track_quantity: boolean; variant_option_values?: { option_value_id: string }[] | null }[] | null;
 };
 
 export const PRODUCT_SELECT =
-  "id, name, slug, price, compare_at_price, quantity, status, product_images(storage_path, sort_order, is_primary), product_variants(is_active, quantity, track_quantity)";
+  "id, name, slug, price, compare_at_price, quantity, status, product_images(storage_path, sort_order, is_primary), product_variants(is_active, quantity, track_quantity, variant_option_values(option_value_id))";
 
 export function toCard(r: Row): ProductCardData {
   const price = Number(r.price) || 0;
@@ -44,7 +44,7 @@ export function toCard(r: Row): ProductCardData {
       compareAt = cmp;
     }
   }
-  const variants = (r.product_variants ?? []).filter((v) => v.is_active);
+  const variants = (r.product_variants ?? []).filter((v) => v.is_active && (v.variant_option_values ?? []).length > 0);
   const stockOk = variants.length
     ? variants.some((v) => !v.track_quantity || Number(v.quantity) > 0)
     : Number(r.quantity) > 0;

@@ -150,3 +150,43 @@ export async function toggleVariant(fd: FormData): Promise<void> {
   await sb.from("product_variants").update({ is_active: fd.get("next") === "1", updated_at: new Date().toISOString() }).eq("id", id).eq("product_id", pid);
   revalidatePath(`/admin/products/${pid}`);
 }
+
+export async function registerImages(pid: string, paths: string[]): Promise<MS> {
+  await requireAnyPermission(["products"]);
+  if (!pid || !Array.isArray(paths) || paths.length === 0) return { error: "طلب غير صحيح." };
+  if (paths.some((p) => typeof p !== "string" || !p.startsWith(`${pid}/`) || p.includes(".."))) {
+    return { error: "مسار صورة غير صحيح." };
+  }
+  const sb = await createClient();
+  const cur = await sb.from("product_images").select("sort_order,is_primary").eq("product_id", pid);
+  if (cur.error) return { error: "تعذّر قراءة الصور الحالية." };
+  const ex = cur.data ?? [];
+  if (ex.length + paths.length > MAX_IMAGES) return { error: `الحد الأقصى ${MAX_IMAGES} صورة لكل منتج.` };
+  let sort = ex.reduce((m, r) => Math.max(m, r.sort_order), -1) + 1;
+  const hasPrimary = ex.some((r) => r.is_primary);
+  const rows = paths.map((path) => ({ product_id: pid, storage_path: path, sort_order: sort++, is_primary: false }));
+  if (!hasPrimary) rows[0].is_primary = true;
+  const ins = await sb.from("product_images").insert(rows);
+  if (ins.error) return { error: "تعذّر حفظ بيانات الصورة." };
+  revalidatePath(`/admin/products/${pid}`);
+  return { ok: "تم حفظ الصورة.", n: Date.now() };
+}
+
+export async function moveImage(fd: FormData): Promise<void> {
+  await requireAnyPermission(["products"]);
+  const pid = String(fd.get("product_id") ?? "");
+  const id = String(fd.get("id") ?? "");
+  const dir = fd.get("dir") === "1" ? 1 : -1;
+  if (!pid || !id) return;
+  const sb = await createClient();
+  const r = await sb.from("product_images").select("id").eq("product_id", pid).order("sort_order").order("created_at");
+  const ids = (r.data ?? []).map((x) => x.id as string);
+  const i = ids.indexOf(id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= ids.length) return;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  for (let k = 0; k < ids.length; k++) {
+    await sb.from("product_images").update({ sort_order: k }).eq("id", ids[k]).eq("product_id", pid);
+  }
+  revalidatePath(`/admin/products/${pid}`);
+}
