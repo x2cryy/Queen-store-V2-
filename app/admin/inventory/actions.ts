@@ -1,6 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateShop } from "../../../lib/admin/revalidate-shop";
+import { revalidateShop } from "../../../lib/admin/revalidate-shop";
+import { revalidateShop } from "../../../lib/admin/revalidate-shop";
 import { requireAnyPermission } from "../../../lib/admin/access";
 import { createClient } from "../../../lib/supabase/server";
 
@@ -28,8 +31,26 @@ export async function adjustStock(_prev: AdjustState, fd: FormData): Promise<Adj
 
   const k = KINDS[kind];
   const sb = await createClient();
+  const variantId = String(fd.get("variant_id") ?? "");
+  const expectedRaw = fd.get("expected");
+  if (expectedRaw !== null && String(expectedRaw) !== "") {
+    const { data: cur } = await sb.from("products").select("quantity").eq("id", productId).maybeSingle();
+    if (!cur) return { error: "المنتج غير موجود." };
+    let curQty = Number((cur as { quantity: number }).quantity);
+    if (variantId) {
+      const { data: vr } = await sb
+        .from("product_variants").select("quantity,track_quantity")
+        .eq("id", variantId).eq("product_id", productId).maybeSingle();
+      if (!vr) return { error: "الخيار غير موجود." };
+      const v = vr as { quantity: number; track_quantity: boolean };
+      if (v.track_quantity) curQty = Number(v.quantity);
+    }
+    if (curQty !== Number(expectedRaw)) {
+      return { error: "تغيّرت الكمية قبل الحفظ. حدّث الصفحة وأعد المحاولة." };
+    }
+  }
   const { error } = await sb.from("inventory_movements").insert({
-    product_id: productId, change: k.s * qty, movement_type: k.t, reason,
+    product_id: productId, ...(variantId ? { variant_id: variantId } : {}), change: k.s * qty, movement_type: k.t, reason,
   });
   if (error) {
     if (error.code === "23514") return { error: "الكمية الحالية لا تكفي لهذا الخصم." };
@@ -38,5 +59,8 @@ export async function adjustStock(_prev: AdjustState, fd: FormData): Promise<Adj
   }
   revalidatePath("/admin/inventory");
   revalidatePath("/admin/products");
+  revalidateShop();
+  revalidateShop();
+  revalidateShop();
   return { ok: "تم تسجيل الحركة.", n: Date.now() };
 }

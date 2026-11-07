@@ -1,148 +1,190 @@
 import Link from "next/link";
+import { ArrowRight, Plus, X } from "lucide-react";
 import { requireAnyPermission } from "../../../lib/admin/access";
-import { createClient } from "../../../lib/supabase/server";
-import { fmtIQD, fmtNum, fmtDate } from "../../../lib/admin/fmt";
-import { PageHead, KpiGrid, Panel, Badge, Empty } from "../_components/ui";
+import { fmtNum } from "../../../lib/admin/fmt";
+import { CATEGORY_BUCKET, getAdjustTarget, getDetail, getList, getOverview, type Filters } from "../../../lib/admin/inventory";
+import { publicImageUrl } from "../../../lib/shop/images";
+import { PageHead, Panel, Empty } from "../_components/ui";
 import { AdjustForm } from "./_components/AdjustForm";
+import { ProductPanel } from "./_components/ProductPanel";
+import { CategoryGrid, ProductGrid, type Tile } from "./_components/Cards";
+import st from "./inventory.module.css";
 
-type P = { id: string; name: string; quantity: number; low_stock_threshold: number; price: number; barcode: string | null };
-type M = {
-  id: string; product_id: string; change: number; movement_type: string;
-  quantity_before: number; quantity_after: number; reason: string | null; created_at: string;
-};
+type SP = { q?: string; c?: string; v?: string; s?: string; o?: string; pg?: string; p?: string; open?: string };
+const UUID = /^[0-9a-f-]{36}$/i;
 
-const LABELS: Record<string, string> = {
-  stock_in: "إدخال بضاعة", sale: "بيع", return: "مرتجع",
-  manual_adjustment: "تسوية يدوية", damage: "تالف", stocktake: "جرد",
-};
-const isOut = (p: P) => p.quantity <= 0;
-const isLow = (p: P) => p.quantity > 0 && p.quantity <= p.low_stock_threshold;
-
-export default async function Page({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string; s?: string; p?: string }>;
-}) {
-  await requireAnyPermission(["inventory"]);
+export default async function Page({ searchParams }: { searchParams: Promise<SP> }) {
+  await requireAnyPermission(["products", "inventory"]);
   const sp = await searchParams;
-  const sb = await createClient();
+  const q = (sp.q ?? "").replace(/[%,()]/g, "").trim().slice(0, 60);
+  const c = sp.c === "all" || sp.c === "none" || (sp.c && UUID.test(sp.c)) ? sp.c : "";
+  const v = sp.v === "shown" || sp.v === "hidden" ? sp.v : "";
+  const s = sp.s === "ok" || sp.s === "low" || sp.s === "out" ? sp.s : "";
+  const sortBy = ["name", "qty", "price_asc", "price_desc"].includes(sp.o ?? "") ? (sp.o as string) : "new";
+  const pg = Math.max(1, parseInt(sp.pg ?? "1", 10) || 1);
+  const f: Filters = { q, c: c ?? "", v, s, o: sortBy, pg };
 
-  const [pr, mv] = await Promise.all([
-    sb.from("products")
-      .select("id,name,quantity,low_stock_threshold,price,barcode")
-      .order("quantity", { ascending: true })
-      .range(0, 4999),
-    sb.from("inventory_movements")
-      .select("id,product_id,change,movement_type,quantity_before,quantity_after,reason,created_at")
-      .order("created_at", { ascending: false })
-      .limit(15),
-  ]);
+  const mk = (over: Record<string, string | number | null>) => {
+    const u = new URLSearchParams();
+    if (q) u.set("q", q);
+    if (c) u.set("c", c);
+    if (v) u.set("v", v);
+    if (s) u.set("s", s);
+    if (sortBy !== "new") u.set("o", sortBy);
+    for (const [k, val] of Object.entries(over)) {
+      if (val === null || val === "") u.delete(k); else u.set(k, String(val));
+    }
+    const qs = u.toString();
+    return "/admin/inventory" + (qs ? "?" + qs : "");
+  };
 
-  if (pr.error) {
+  const ov = await getOverview();
+  if (!ov) {
     return (
-      <section>
-        <PageHead title="المخزون" />
-        <Panel><Empty>تعذّر تحميل المخزون. حدّث الصفحة وحاول مجدداً.</Empty></Panel>
+      <section className={st.page}>
+        <PageHead title="المخزون" desc="منتجاتك وتصنيفاتها وكمياتها في مكان واحد" />
+        <Panel><Empty>تعذّر تحميل المخزون. <Link className="ds-btn" href="/admin/inventory">إعادة المحاولة</Link></Empty></Panel>
       </section>
     );
   }
+  const t = ov.totals;
+  const catName = new Map(ov.cats.map((x) => [x.id, x.name]));
+  const showProducts = !!(c || q || v || s);
 
-  const all = (pr.data ?? []) as P[];
-  const moves = (mv.data ?? []) as M[];
-  const name = new Map(all.map((p) => [p.id, p.name]));
+  let list: Awaited<ReturnType<typeof getList>> | null = null;
+  let failed = false;
+  if (showProducts) {
+    try { list = await getList(f, ov.slim); } catch { failed = true; }
+  }
+  const target = sp.p && UUID.test(sp.p) ? await getAdjustTarget(sp.p) : null;
 
-  const units = all.reduce((a, p) => a + p.quantity, 0);
-  const value = all.reduce((a, p) => a + p.quantity * p.price, 0);
-  const low = all.filter(isLow).length;
-  const out = all.filter(isOut).length;
+  const openId = sp.open && UUID.test(sp.open) ? sp.open : "";
+  const detail = openId ? await getDetail(openId, catName) : null;
 
-  const q = (sp.q ?? "").trim().toLowerCase();
-  let rows = all;
-  if (q) rows = rows.filter((p) => p.name.toLowerCase().includes(q) || (p.barcode ?? "").toLowerCase().includes(q));
-  if (sp.s === "low") rows = rows.filter(isLow);
-  if (sp.s === "out") rows = rows.filter(isOut);
-  if (sp.s === "ok") rows = rows.filter((p) => !isLow(p) && !isOut(p));
-  const shown = rows.slice(0, 100);
+  const create = <Link href="/admin/products/new" className="ds-btn ds-btn-gold"><Plus size={16} /> إنشاء منتج</Link>;
 
-  const byName = [...all].sort((a, b) => a.name.localeCompare(b.name, "ar")).slice(0, 1000);
+  const kpis = [
+    { label: "إجمالي المنتجات", value: t.all, hint: "المنتجات الأساسية دون عدد الخيارات", href: "/admin/inventory?c=all", on: c === "all" && !v && !s },
+    { label: "منخفضة المخزون", value: t.low, hint: "الكمية ضمن حد التنبيه", href: "/admin/inventory?s=low", on: s === "low" },
+    { label: "نافدة", value: t.out, hint: "الكمية صفر", href: "/admin/inventory?s=out", on: s === "out" },
+    { label: "مخفية", value: t.hidden, hint: "حالة ظهور، وقد تكون نافدة أيضاً", href: "/admin/inventory?v=hidden", on: v === "hidden" },
+  ];
+
+  const tiles: Tile[] = [
+    { key: "all", href: "/admin/inventory?c=all", name: "جميع المنتجات", counts: { total: t.all, low: t.low, out: t.out }, icon: "all", image: null },
+  ];
+  for (const k of ov.cats) {
+    tiles.push({
+      key: k.id, href: `/admin/inventory?c=${k.id}`, name: k.name, icon: "cat",
+      counts: ov.perCat[k.id] ?? { total: 0, low: 0, out: 0 },
+      image: CATEGORY_BUCKET && k.image_path ? publicImageUrl(CATEGORY_BUCKET, k.image_path) : null,
+      hidden: !k.is_active,
+    });
+  }
+  if (ov.perCat.none?.total) {
+    tiles.push({ key: "none", href: "/admin/inventory?c=none", name: "غير مصنف", counts: ov.perCat.none, icon: "none", image: null });
+  }
+
+  const title = c === "none" ? "غير مصنف" : c && c !== "all" ? (catName.get(c) ?? "التصنيف") : q ? "نتائج البحث" : "جميع المنتجات";
+  const chips: { label: string; href: string }[] = [];
+  if (q) chips.push({ label: `بحث: ${q}`, href: mk({ q: null, pg: null }) });
+  if (v) chips.push({ label: v === "hidden" ? "مخفي" : "منشور", href: mk({ v: null, pg: null }) });
+  if (s) chips.push({ label: s === "low" ? "منخفض" : s === "out" ? "نافد" : "متوفر", href: mk({ s: null, pg: null }) });
+  const filtered = !!(q || v || s);
 
   return (
-    <section>
-      <PageHead title="المخزون" desc="الكميات وحركات المخزون. كل تغيير في الكمية يُسجَّل في السجل." />
-      <KpiGrid
-        items={[
-          { label: "إجمالي القطع", value: fmtNum(units) },
-          { label: "قيمة المخزون", value: fmtIQD(value), hint: "بسعر البيع" },
-          { label: "مخزون منخفض", value: fmtNum(low), tone: low ? "warn" : undefined },
-          { label: "نافد", value: fmtNum(out), tone: out ? "bad" : undefined },
-        ]}
-      />
+    <section className={st.page}>
+      <PageHead title="المخزون" desc="منتجاتك وتصنيفاتها وكمياتها في مكان واحد" actions={create} />
 
-      <Panel title="تسوية المخزون">
-        {all.length === 0 ? <Empty>أضف منتجات أولاً.</Empty> : <AdjustForm products={byName} selected={sp.p} />}
-      </Panel>
+      <div className={st.kpis}>
+        {kpis.map((k) => (
+          <Link key={k.label} href={k.href} className={`${st.kpi} ${k.on ? st.kpiOn : ""}`}>
+            <span className={st.kpiLabel}>{k.label}</span>
+            <span className={st.kpiValue}>{fmtNum(k.value)}</span>
+            <span className={st.kpiHint}>{k.hint}</span>
+          </Link>
+        ))}
+      </div>
 
-      <Panel title="كميات المنتجات">
-        <form method="get" className="ds-filters">
-          <input className="ds-input" style={{ flex: "2 1 200px" }} name="q" defaultValue={sp.q ?? ""} placeholder="بحث بالاسم أو الباركود" />
-          <select className="ds-select" style={{ flex: "1 1 140px" }} name="s" defaultValue={sp.s ?? ""}>
-            <option value="">كل الحالات</option>
-            <option value="ok">متوفر</option>
-            <option value="low">منخفض</option>
-            <option value="out">نافد</option>
-          </select>
-          <button className="ds-btn ds-btn-gold" type="submit">تطبيق</button>
-        </form>
-        {shown.length === 0 ? (
-          <Empty>{all.length === 0 ? "لا توجد منتجات بعد." : "لا توجد نتائج مطابقة."}</Empty>
-        ) : (
-          <table className="ds-table">
-            <thead>
-              <tr><th>المنتج</th><th>الكمية</th><th>حد التنبيه</th><th>الحالة</th><th></th></tr>
-            </thead>
-            <tbody>
-              {shown.map((p) => (
-                <tr key={p.id}>
-                  <td data-label="المنتج"><strong>{p.name}</strong></td>
-                  <td data-label="الكمية">{fmtNum(p.quantity)}</td>
-                  <td data-label="حد التنبيه">{fmtNum(p.low_stock_threshold)}</td>
-                  <td data-label="الحالة">
-                    {isOut(p) ? <Badge tone="bad">نافد</Badge> : isLow(p) ? <Badge tone="warn">منخفض</Badge> : <Badge tone="good">متوفر</Badge>}
-                  </td>
-                  <td><Link className="ds-btn" href={`/admin/inventory?p=${p.id}#adjust`}>تسوية</Link></td>
-                </tr>
+      <form method="get" action="/admin/inventory" className={st.bar}>
+        <input className={`ds-input ${st.search}`} type="search" name="q" defaultValue={q}
+          placeholder="ابحث بالاسم أو الماركة أو الباركود أو رمز الخيار" aria-label="بحث" />
+        <select className={`ds-select ${st.field}`} name="c" defaultValue={c === "all" ? "" : c} aria-label="التصنيف">
+          <option value="">جميع التصنيفات</option>
+          <option value="none">غير مصنف</option>
+          {ov.cats.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+        </select>
+        <select className={`ds-select ${st.field}`} name="v" defaultValue={v} aria-label="الظهور">
+          <option value="">كل حالات الظهور</option>
+          <option value="shown">منشور</option>
+          <option value="hidden">مخفي</option>
+        </select>
+        <select className={`ds-select ${st.field}`} name="s" defaultValue={s} aria-label="المخزون">
+          <option value="">كل حالات المخزون</option>
+          <option value="ok">متوفر</option>
+          <option value="low">منخفض</option>
+          <option value="out">نافد</option>
+        </select>
+        <select className={`ds-select ${st.field}`} name="o" defaultValue={sortBy} aria-label="الترتيب">
+          <option value="new">الأحدث</option>
+          <option value="name">الاسم</option>
+          <option value="qty">الأقل كمية</option>
+          <option value="price_asc">السعر تصاعدياً</option>
+          <option value="price_desc">السعر تنازلياً</option>
+        </select>
+        <button type="submit" className="ds-btn ds-btn-gold">بحث</button>
+      </form>
+
+      {target ? (
+        <Panel title={`تعديل الكمية: ${target.name}`} action={<Link className="ds-btn" href={mk({})}>إغلاق</Link>}>
+          <AdjustForm products={[target]} selected={target.id} />
+        </Panel>
+      ) : null}
+
+      {t.all === 0 ? (
+        <Panel><Empty>لم تُضف منتجات بعد. {create}</Empty></Panel>
+      ) : !showProducts ? (
+        <CategoryGrid tiles={tiles} />
+      ) : failed || !list ? (
+        <Panel><Empty>تعذّر تحميل المنتجات. <Link className="ds-btn" href={mk({})}>إعادة المحاولة</Link></Empty></Panel>
+      ) : (
+        <>
+          <div className={st.crumb}>
+            <Link href="/admin/inventory" className="ds-btn"><ArrowRight size={16} /> التصنيفات</Link>
+            <h2>{title}</h2>
+            <span className={st.muted}>{fmtNum(list.total)} منتج</span>
+          </div>
+          {chips.length ? (
+            <div className={st.chips}>
+              {chips.map((x) => (
+                <Link key={x.label} href={x.href} className={st.chip}>{x.label} <X size={14} /></Link>
               ))}
-            </tbody>
-          </table>
-        )}
-        {rows.length > 100 ? <p className="ds-desc">يعرض أول 100 منتج. استخدم البحث لتضييق النتائج.</p> : null}
-      </Panel>
-
-      <Panel title="آخر الحركات">
-        {moves.length === 0 ? (
-          <Empty>لا توجد حركات مخزون بعد.</Empty>
-        ) : (
-          <table className="ds-table">
-            <thead>
-              <tr><th>المنتج</th><th>النوع</th><th>التغيير</th><th>قبل ← بعد</th><th>السبب</th><th>التاريخ</th></tr>
-            </thead>
-            <tbody>
-              {moves.map((m) => (
-                <tr key={m.id}>
-                  <td data-label="المنتج">{name.get(m.product_id) ?? "-"}</td>
-                  <td data-label="النوع">{LABELS[m.movement_type] ?? m.movement_type}</td>
-                  <td data-label="التغيير">
-                    <Badge tone={m.change > 0 ? "good" : "bad"}>{m.change > 0 ? `+${fmtNum(m.change)}` : fmtNum(m.change)}</Badge>
-                  </td>
-                  <td data-label="قبل ← بعد">{fmtNum(m.quantity_before)} ← {fmtNum(m.quantity_after)}</td>
-                  <td data-label="السبب">{m.reason ?? "-"}</td>
-                  <td data-label="التاريخ">{fmtDate(m.created_at)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Panel>
+              <Link href={mk({ q: null, v: null, s: null, pg: null })} className="ds-btn">مسح الفلاتر</Link>
+            </div>
+          ) : null}
+          {c && c !== "all" && q ? (
+            <div className={st.muted}>البحث داخل هذا التصنيف فقط. <Link href={mk({ c: "all", pg: null })} className="ds-btn">توسيع البحث لجميع المنتجات</Link></div>
+          ) : null}
+          {list.items.length === 0 ? (
+            <Panel>
+              <Empty>
+                {filtered ? "لا توجد نتائج مطابقة للبحث أو الفلاتر. " : "لا توجد منتجات في هذا التصنيف. "}
+                {filtered ? <Link className="ds-btn" href={mk({ q: null, v: null, s: null, pg: null })}>مسح الفلاتر</Link> : create}
+              </Empty>
+            </Panel>
+          ) : (
+            <ProductGrid items={list.items} adjustHref={(id) => mk({ p: id })} openHref={(id) => mk({ open: id })} />
+          )}
+          {list.pages > 1 ? (
+            <div className={st.pager}>
+              {pg > 1 ? <Link className="ds-btn" href={mk({ pg: pg - 1 })}>السابق</Link> : <span className={`ds-btn ${st.off}`}>السابق</span>}
+              <span className={st.muted}>صفحة {fmtNum(pg)} من {fmtNum(list.pages)}</span>
+              {pg < list.pages ? <Link className="ds-btn" href={mk({ pg: pg + 1 })}>التالي</Link> : <span className={`ds-btn ${st.off}`}>التالي</span>}
+            </div>
+          ) : null}
+        </>
+      )}
+      {detail ? <ProductPanel d={detail} closeHref={mk({})} adjustHref={mk({ p: detail.product.id })} /> : null}
     </section>
   );
 }

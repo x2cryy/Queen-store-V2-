@@ -2,6 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { revalidateShop } from "../../../lib/admin/revalidate-shop";
+import { revalidateShop } from "../../../lib/admin/revalidate-shop";
+import { revalidateShop } from "../../../lib/admin/revalidate-shop";
 import { requireAnyPermission } from "../../../lib/admin/access";
 import { createClient } from "../../../lib/supabase/server";
 
@@ -102,6 +105,9 @@ export async function saveProduct(_prev: FormState, fd: FormData): Promise<FormS
   } catch {}
 
   revalidatePath("/admin/products");
+  revalidateShop();
+  revalidateShop();
+  revalidateShop();
   if (!id && productId) redirect(`/admin/products/${productId}`);
   redirect("/admin/products");
 }

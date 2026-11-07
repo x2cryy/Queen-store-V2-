@@ -233,7 +233,7 @@ export function ProductForm({
           <div className="ds-form">
             <div>
               <label className="ds-label" htmlFor="status">الحالة</label>
-              <select className="ds-select" id="status" name="status" defaultValue={p?.status === "active" ? "active" : "hidden"}>
+              <select className="ds-select" id="status" name="status" defaultValue={p ? (p.status === "hidden" ? "hidden" : "active") : "hidden"}>
                 <option value="active">نشط (يظهر في المتجر)</option>
                 <option value="hidden">مخفي</option>
               </select>
