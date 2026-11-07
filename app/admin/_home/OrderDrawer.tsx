@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
-import type { Order } from "../_data/mock";
-import { PAY_META, STATUS_META, fullDateTime, orderTotals } from "../_lib/orders";
-import { fmtMoney } from "../_lib/utils";
+import type { Order } from "../../../lib/admin/home-types";
+import { PAY_TONE, STATUS_TONE, fullDateTime, tone } from "./_lib/orders";
+import { fmtMoney } from "./_lib/utils";
 
 export default function OrderDrawer({ order, onClose }: { order: Order | null; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -21,20 +22,18 @@ export default function OrderDrawer({ order, onClose }: { order: Order | null; o
     return () => document.removeEventListener("keydown", key);
   }, [open, onClose]);
 
-  const t = order ? orderTotals(order) : null;
-
   return (
     <AnimatePresence>
-      {order && t && (
+      {order && (
         <motion.div key="scrim" className="hp-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
       )}
-      {order && t && (
+      {order && (
         <motion.aside
           key="drawer"
           className="hp-drawer"
           role="dialog"
           aria-modal="true"
-          aria-label={`تفاصيل الطلب رقم ${order.id}`}
+          aria-label={`تفاصيل الطلب رقم ${order.number}`}
           initial={{ x: "-100%" }}
           animate={{ x: 0 }}
           exit={{ x: "-100%" }}
@@ -43,7 +42,7 @@ export default function OrderDrawer({ order, onClose }: { order: Order | null; o
           <div className="hp-drawer-head">
             <div>
               <h2 className="hp-h2">
-                طلب رقم <bdi dir="ltr">{order.id}</bdi>
+                طلب رقم <bdi dir="ltr">{order.number}</bdi>
               </h2>
               <p className="hp-note" style={{ margin: "4px 0 0" }}>
                 {fullDateTime(order.createdAt)}
@@ -56,11 +55,11 @@ export default function OrderDrawer({ order, onClose }: { order: Order | null; o
 
           <div className="hp-drawer-body">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              <span className="hp-pill hp-tone" data-tone={STATUS_META[order.status].tone}>
-                {STATUS_META[order.status].label}
+              <span className="hp-pill hp-tone" data-tone={tone(STATUS_TONE, order.status)}>
+                {order.statusLabel}
               </span>
-              <span className="hp-pill hp-tone" data-tone={PAY_META[order.pay].tone}>
-                {PAY_META[order.pay].label}
+              <span className="hp-pill hp-tone" data-tone={tone(PAY_TONE, order.pay)}>
+                {order.payLabel}
               </span>
             </div>
 
@@ -70,9 +69,15 @@ export default function OrderDrawer({ order, onClose }: { order: Order | null; o
               <dt>رقم الهاتف</dt>
               <dd>{order.phone ? <bdi dir="ltr">{order.phone}</bdi> : "غير متوفر"}</dd>
               <dt>المنطقة</dt>
-              <dd>{order.area ?? "غير متوفرة"}</dd>
+              <dd>{order.place ?? "غير متوفرة"}</dd>
               <dt>العنوان</dt>
               <dd>{order.address ?? "غير متوفر"}</dd>
+              {order.landmark && (
+                <>
+                  <dt>أقرب نقطة دالة</dt>
+                  <dd>{order.landmark}</dd>
+                </>
+              )}
             </dl>
 
             <div>
@@ -86,61 +91,59 @@ export default function OrderDrawer({ order, onClose }: { order: Order | null; o
               <h2 className="hp-h2" style={{ marginBottom: 4 }}>
                 المنتجات
               </h2>
-              <ul>
-                {order.items.map((it, i) => (
-                  <li key={`${it.name}-${i}`} className="hp-item">
-                    <span className="hp-item-n">{i + 1}</span>
-                    <span className="hp-item-name">{it.name}</span>
-                    <span className="hp-item-total">{fmtMoney(it.qty * it.unit)}</span>
-                    <span className="hp-item-sub">
-                      {it.option ? `الخيار: ${it.option} · ` : ""}الكمية: {it.qty} × {fmtMoney(it.unit)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              {order.items.length === 0 ? (
+                <p className="hp-note">لا توجد أصناف مسجلة لهذا الطلب.</p>
+              ) : (
+                <ul>
+                  {order.items.map((it, i) => (
+                    <li key={`${it.name}-${i}`} className="hp-item">
+                      <span className="hp-item-n">{i + 1}</span>
+                      <span className="hp-item-name">{it.name}</span>
+                      <span className="hp-item-total">{fmtMoney(it.line)}</span>
+                      <span className="hp-item-sub">
+                        {it.option ? `الخيار: ${it.option} · ` : ""}الكمية: {it.qty} × {fmtMoney(it.unit)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <div>
               <div className="hp-sum">
                 <span>المجموع</span>
-                <span>{fmtMoney(t.subtotal)}</span>
+                <span>{fmtMoney(order.subtotal)}</span>
               </div>
-              {t.discount > 0 && (
+              {order.discount > 0 && (
                 <div className="hp-sum">
                   <span>الخصم</span>
-                  <span>− {fmtMoney(t.discount)}</span>
+                  <span>− {fmtMoney(order.discount)}</span>
                 </div>
               )}
-              {order.fees.map((f) => (
-                <div key={f.label} className="hp-sum">
-                  <span>{f.label}</span>
-                  <span>{fmtMoney(f.amount)}</span>
+              {order.fee > 0 && (
+                <div className="hp-sum">
+                  <span>رسوم التوصيل</span>
+                  <span>{fmtMoney(order.fee)}</span>
                 </div>
-              ))}
+              )}
               <div className="hp-sum hp-sum--total">
                 <span>الإجمالي النهائي</span>
-                <span>{fmtMoney(t.total)}</span>
+                <span>{fmtMoney(order.total)}</span>
               </div>
             </div>
-
-            <p className="hp-note" data-warn="true">
-              الأزرار أدناه معطلة لأن هذه الطلبات تجريبية. تُفعَّل عند الربط الحقيقي وتفتح الصفحات الموجودة في المتجر.
-            </p>
           </div>
 
           <div className="hp-drawer-foot">
-            <button type="button" className="hp-btn hp-btn--solid" disabled title="يُفعَّل عند الربط الحقيقي">
+            <Link className="hp-btn hp-btn--solid" href={`/admin/orders/${order.id}`}>
               فتح الطلب الكامل
-            </button>
-            {order.hasReceipt && (
-              <button type="button" className="hp-btn" disabled title="يُفعَّل عند الربط الحقيقي">
-                عرض الوصل
-              </button>
-            )}
-            {order.hasChat && (
-              <button type="button" className="hp-btn" disabled title="يُفعَّل عند الربط الحقيقي">
+            </Link>
+            <Link className="hp-btn" href={`/print/order/${order.id}`} target="_blank" rel="noopener noreferrer">
+              عرض الوصل
+            </Link>
+            {order.chatId && (
+              <Link className="hp-btn" href="/admin/chats">
                 فتح المحادثة
-              </button>
+              </Link>
             )}
           </div>
         </motion.aside>

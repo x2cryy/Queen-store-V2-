@@ -172,3 +172,17 @@ html[data-theme="dark"] .hp-root{
 @container (min-width:720px){
   .hp-order{grid-template-columns:minmax(0,1fr) auto auto auto}
 }
+
+/* إضافات الرئيسية الفعلية */
+.hp-flow{display:flex;flex-direction:column;gap:16px}
+.hp-q-wrap{position:relative;min-width:0}
+.hp-row{flex-wrap:wrap}
+.hp-row-txt{flex:1 1 140px}
+.hp-row-end{display:flex;align-items:center;gap:8px;flex:none}
+.hp-na{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:14px;font-weight:700;color:var(--hp-muted)}
+.hp-na-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.hp-root a.hp-btn--solid{color:var(--hp-bg)}
+.hp-main.hp-main--solo{grid-template-columns:minmax(0,1fr)}
+@container (min-width:720px){
+  .hp-order{grid-template-columns:minmax(0,1fr) auto auto auto}
+}

@@ -1,18 +1,22 @@
+"use client";
+
 import Link from "next/link";
 import { CalendarClock, Check, CreditCard, MessageCircle, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { FollowUp as Item } from "../_data/mock";
-import { fmtNum } from "../_lib/utils";
+import type { FollowItem, Sec } from "../../../lib/admin/home-types";
+import { fmtNum } from "./_lib/utils";
 
-const ICONS: Record<Item["key"], LucideIcon> = {
+const ICONS: Record<FollowItem["key"], LucideIcon> = {
   messages: MessageCircle,
   qicard: CreditCard,
   store_debts: Wallet,
   store_installments: CalendarClock,
 };
 
-export default function FollowUp({ items }: { items: Item[] }) {
-  const active = items.filter((i) => i.count === null || i.count > 0);
+export default function FollowUp({ sec }: { sec: Sec<FollowItem[]> }) {
+  if (sec.state !== "ok") return null;
+  const active = sec.data.filter((i) => i.state !== "ok" || i.count > 0);
+
   return (
     <section className="hp-card">
       <div className="hp-card-head">
@@ -36,9 +40,13 @@ export default function FollowUp({ items }: { items: Item[] }) {
                   <span className="hp-row-sub">{i.note}</span>
                 </span>
                 <span className="hp-row-end">
-                  {i.count === null ? (
+                  {i.state === "na" ? (
                     <span className="hp-pill hp-tone" data-tone="gray">
                       غير معروض
+                    </span>
+                  ) : i.state === "error" ? (
+                    <span className="hp-pill hp-tone" data-tone="red">
+                      تعذّر التحميل
                     </span>
                   ) : (
                     <>

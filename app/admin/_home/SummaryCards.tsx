@@ -1,11 +1,14 @@
+"use client";
+
 import Link from "next/link";
-import { Minus, Package, Receipt, ShoppingBag, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { Info, Lock, Minus, Package, Receipt, ShoppingBag, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { Summary } from "../_data/mock";
-import { fmtNum } from "../_lib/utils";
+import type { Metric, Summary } from "../../../lib/admin/home-types";
+import { fmtNum } from "./_lib/utils";
+import Retry from "./Retry";
 
 function Delta({ cur, prev, down }: { cur: number; prev: number | null; down: "bad" | "neutral" }) {
-  if (!prev) {
+  if (prev === null) {
     return (
       <span className="hp-delta" data-tone="na">
         <Minus size={14} aria-hidden /> لا تتوفر مقارنة
@@ -34,31 +37,29 @@ function Delta({ cur, prev, down }: { cur: number; prev: number | null; down: "b
   );
 }
 
-type CardDef = {
+type Def = {
   key: string;
   title: string;
   icon: LucideIcon;
-  value: number;
-  money: boolean;
+  metric: Metric;
   unit: string;
   note: string;
-  prev?: number | null;
+  compare: boolean;
   down?: "bad" | "neutral";
   href: string;
   cta: string;
 };
 
 export default function SummaryCards({ summary: s }: { summary: Summary }) {
-  const cards: CardDef[] = [
+  const cards: Def[] = [
     {
       key: "new",
       title: "الطلبات الجديدة اليوم",
       icon: Receipt,
-      value: s.newToday,
-      money: false,
+      metric: s.newToday,
       unit: "طلب",
-      note: "طلبات أُنشئت اليوم",
-      prev: s.newYesterday,
+      note: "كل الطلبات التي أُنشئت اليوم، وتشمل الملغاة",
+      compare: true,
       down: "neutral",
       href: "/admin/orders",
       cta: "عرض الطلبات",
@@ -67,10 +68,10 @@ export default function SummaryCards({ summary: s }: { summary: Summary }) {
       key: "processing",
       title: "الطلبات قيد التجهيز",
       icon: Package,
-      value: s.processing,
-      money: false,
+      metric: s.processing,
       unit: "طلب",
-      note: "الطلبات الحالية في هذه الحالة، وقد تكون من أيام سابقة",
+      note: "الطلبات الحالية قيد التجهيز أو الجاهزة، وقد تكون من أيام سابقة",
+      compare: false,
       href: "/admin/orders/live",
       cta: "الطلبات المباشرة",
     },
@@ -78,11 +79,10 @@ export default function SummaryCards({ summary: s }: { summary: Summary }) {
       key: "sales",
       title: "مبيعات اليوم",
       icon: ShoppingBag,
-      value: s.salesToday,
-      money: true,
+      metric: s.sales,
       unit: "د.ع",
-      note: "حسب تعريف المبيعات المعتمد في التقارير",
-      prev: s.salesYesterday,
+      note: "صافي مبيعات الطلبات المسلَّمة اليوم بعد الخصم، دون رسوم التوصيل (حسب تعريف التقارير)",
+      compare: true,
       down: "bad",
       href: "/admin/reports",
       cta: "فتح التقارير",
@@ -91,10 +91,11 @@ export default function SummaryCards({ summary: s }: { summary: Summary }) {
       key: "collected",
       title: "المبالغ المحصلة اليوم",
       icon: Wallet,
-      value: s.collectedToday,
-      money: true,
+      metric: s.collected,
       unit: "د.ع",
-      note: "مبالغ مسددة فعلًا، وليست كل مبالغ الطلبات",
+      note: "مدفوعات ناجحة سُجّلت اليوم، وليست كل مبالغ الطلبات",
+      compare: true,
+      down: "bad",
       href: "/admin/reports",
       cta: "فتح التقارير",
     },
@@ -110,17 +111,38 @@ export default function SummaryCards({ summary: s }: { summary: Summary }) {
             </span>
             {c.title}
           </div>
-          <div className="hp-kpi-val">
-            <span className="hp-money">
-              <bdi dir="ltr">{fmtNum(c.value)}</bdi>
-              <span className="hp-unit">{c.unit}</span>
-            </span>
-          </div>
-          {c.prev !== undefined && <Delta cur={c.value} prev={c.prev} down={c.down ?? "neutral"} />}
-          <p className="hp-note">{c.note}</p>
-          <Link className="hp-link hp-kpi-link" href={c.href}>
-            {c.cta}
-          </Link>
+
+          {c.metric.state === "ok" ? (
+            <>
+              <div className="hp-kpi-val">
+                <span className="hp-money">
+                  <bdi dir="ltr">{fmtNum(c.metric.data.value)}</bdi>
+                  <span className="hp-unit">{c.unit}</span>
+                </span>
+              </div>
+              {c.compare && <Delta cur={c.metric.data.value} prev={c.metric.data.prev} down={c.down ?? "neutral"} />}
+              <p className="hp-note">{c.note}</p>
+              <Link className="hp-link hp-kpi-link" href={c.href}>
+                {c.cta}
+              </Link>
+            </>
+          ) : c.metric.state === "hidden" ? (
+            <>
+              <p className="hp-na">
+                <Lock size={16} aria-hidden /> غير متاح لصلاحياتك
+              </p>
+              <p className="hp-note">{c.note}</p>
+            </>
+          ) : (
+            <>
+              <p className="hp-na" role="alert">
+                <Info size={16} aria-hidden /> تعذّر تحميل هذه البطاقة
+              </p>
+              <div className="hp-na-row">
+                <Retry />
+              </div>
+            </>
+          )}
         </article>
       ))}
     </div>
