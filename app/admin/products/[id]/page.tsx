@@ -16,7 +16,7 @@ export default async function Page({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ v?: string; partial?: string }>;
+  searchParams: Promise<{ v?: string; partial?: string; done?: string }>;
 }) {
   await requireAnyPermission(["products"]);
   const { id } = await params;
@@ -58,6 +58,18 @@ export default async function Page({
           </div>
         }
       />
+      {sp.done ? (
+        <Panel>
+          <p role="status" style={{ fontWeight: 600 }}>
+            {({
+              published: "تم نشر المنتج وهو ظاهر للزبائن.",
+              draft: "تم حفظ المنتج كمسودة (غير ظاهر للزبائن).",
+              partial: "حُفظ المنتج لكن لم تكتمل الكمية أو التكلفة. راجعهما واحفظ مرة أخرى.",
+              publish_failed: "حُفظ المنتج كمسودة لكن تعذّر نشره. تحقق من التصنيف والسعر والصور ثم اضغط «نشر المنتج».",
+            } as Record<string, string>)[sp.done] ?? ""}
+          </p>
+        </Panel>
+      ) : null}
       {sp.partial ? (
         <Panel>
           <p role="alert" style={{ color: "var(--c-warn, #B45309)", fontWeight: 600 }}>
@@ -65,9 +77,12 @@ export default async function Page({
           </p>
         </Panel>
       ) : null}
-      <Panel title="بيانات المنتج">
-        <ProductForm categories={cat.data ?? []} product={pr.data as ProductInit} cost={cr.data?.cost_price ?? null} />
-      </Panel>
+      <ProductForm
+        categories={cat.data ?? []}
+        product={pr.data as ProductInit}
+        cost={cr.data?.cost_price ?? null}
+        primaryUrl={imgs.length ? urlOf((imgs.find((m) => m.is_primary) ?? imgs[0]).storage_path) : null}
+      />
 
       <Panel title="صور المنتج">
         {im.error ? (

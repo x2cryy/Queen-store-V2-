@@ -1,12 +1,11 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { revalidateShop } from "../../../lib/admin/revalidate-shop";
 import { requireAnyPermission } from "../../../lib/admin/access";
 import { createClient } from "../../../lib/supabase/server";
 
-export type FormState = { error?: string; ok?: string };
+export type FormState = { error?: string; ok?: string; productId?: string; partial?: boolean };
 
 const num = (v: FormDataEntryValue | null) => {
   const s = String(v ?? "").replace(/,/g, "").trim();
@@ -113,11 +112,7 @@ export async function saveProduct(_prev: FormState, fd: FormData): Promise<FormS
   if (productId) revalidatePath(`/admin/products/${productId}`);
   revalidateShop();
 
-  if (!id && productId) {
-    // المنتج أُنشئ فعلًا: ننتقل لصفحته دائمًا حتى لا يتكرر عند إعادة المحاولة.
-    redirect(`/admin/products/${productId}${partial ? "?partial=1" : ""}`);
-  }
-  return { ok: "تم حفظ التغييرات." };
+  return { ok: id ? "تم حفظ التغييرات." : "تم إنشاء المنتج.", productId: productId ?? undefined, partial: partial !== null };
 }
 
 export async function setVisibility(_prev: FormState, fd: FormData): Promise<FormState> {
