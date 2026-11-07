@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ExternalLink, Phone, UserRound, X } from "lucide-react";
 import { formatDateTime, formatMoney } from "../../../../lib/admin/format";
+import OrderActions from "./OrderActions";
 
 export type OrderDrawerData = {
   order: {
@@ -97,6 +98,7 @@ export function OrderDrawer({ data, closeHref }: { data: OrderDrawerData; closeH
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: 14, display: "grid", gap: 12, alignContent: "start" }}>
+          <OrderActions data={data} />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div className="ds-kpi"><span className="ds-kpi-label">الإجمالي</span><span className="ds-kpi-value">{formatMoney(Number(o.total) || 0)}</span></div>
             <div className="ds-kpi"><span className="ds-kpi-label">عدد القطع</span><span className="ds-kpi-value">{pieces}</span><span className="ds-kpi-hint">{data.items.length} صنف</span></div>

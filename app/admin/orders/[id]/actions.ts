@@ -19,6 +19,8 @@ function toAmount(raw: string): number | null {
 function done(id: string, message: string): AdminActionState {
   revalidatePath(`/admin/orders/${id}`);
   revalidatePath("/admin/orders");
+  revalidatePath("/admin/orders/live");
+  revalidatePath("/admin/orders/manage");
   return { ok: true, message };
 }
 
