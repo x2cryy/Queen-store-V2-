@@ -28,6 +28,8 @@ export async function saveProduct(_prev: FormState, fd: FormData): Promise<FormS
   const threshold = num(fd.get("low_stock_threshold"));
   const costRaw = txt(fd.get("cost_price"));
   const cost = costRaw === null ? null : num(costRaw);
+  const cmpRaw = txt(fd.get("compare_at_price"));
+  const cmp = cmpRaw === null ? null : num(cmpRaw);
 
   if (!name) return { error: "اسم المنتج مطلوب." };
   if (Number.isNaN(price)) return { error: "أدخل سعر البيع." };
@@ -35,6 +37,8 @@ export async function saveProduct(_prev: FormState, fd: FormData): Promise<FormS
   if (!(quantity >= 0)) return { error: "الكمية غير صحيحة." };
   if (!(threshold >= 0)) return { error: "حد التنبيه غير صحيح." };
   if (cost !== null && !(cost >= 0)) return { error: "سعر التكلفة غير صحيح." };
+  if (cmp !== null && !(cmp >= 0)) return { error: "السعر قبل الخصم غير صحيح." };
+  if (cmp !== null && cmp < price) return { error: "السعر قبل الخصم يجب ألا يقل عن سعر البيع." };
 
   // الحالة لا تُقرأ من النموذج: الإنشاء مسودة، والتعديل لا يمس الحالة.
   const row = {
@@ -45,6 +49,7 @@ export async function saveProduct(_prev: FormState, fd: FormData): Promise<FormS
     barcode: txt(fd.get("barcode")),
     price,
     low_stock_threshold: threshold,
+    compare_at_price: cmp,
     is_featured: fd.get("is_featured") === "on",
     is_new: fd.get("is_new") === "on",
     updated_at: new Date().toISOString(),

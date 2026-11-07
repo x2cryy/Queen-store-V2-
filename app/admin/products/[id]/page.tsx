@@ -8,6 +8,7 @@ import { ProductForm, type ProductInit } from "../_components/ProductForm";
 import { VisibilityButton } from "../_components/VisibilityButton";
 import { VariantForm, type VariantInit } from "../_components/MediaForms";
 import { ImageUploader } from "../_components/ImageUploader";
+import { OptionsManager } from "../_components/OptionsManager";
 import { setPrimaryImage, deleteImage, toggleVariant, moveImage } from "../media-actions";
 
 type Img = { id: string; storage_path: string; is_primary: boolean };
@@ -24,7 +25,7 @@ export default async function Page({
   const sb = await createClient();
   const [pr, cr, cat, im, vr] = await Promise.all([
     sb.from("products")
-      .select("id,slug,name,category_id,brand,description,barcode,price,quantity,low_stock_threshold,status,is_featured,is_new")
+      .select("id,slug,name,category_id,brand,description,barcode,price,compare_at_price,quantity,low_stock_threshold,status,is_featured,is_new")
       .eq("id", id)
       .maybeSingle(),
     sb.from("product_costs").select("cost_price").eq("product_id", id).maybeSingle(),
@@ -39,6 +40,21 @@ export default async function Page({
 
   const imgs = (im.data ?? []) as Img[];
   const vars = (vr.data ?? []) as VariantInit[];
+  type OptRow = { id: string; name: string; kind: string; sort_order: number; product_option_values: { id: string; value: string; sort_order: number }[] | null };
+  const vIds = vars.map((x) => x.id);
+  const optRes = await sb
+    .from("product_options")
+    .select("id,name,kind,sort_order,product_option_values(id,value,sort_order)")
+    .eq("product_id", id)
+    .order("sort_order");
+  const linkRes = vIds.length
+    ? await sb.from("variant_option_values").select("variant_id,option_value_id").in("variant_id", vIds)
+    : { data: [] as { variant_id: string; option_value_id: string }[], error: null };
+  const links = (linkRes.data ?? []) as unknown as { variant_id: string; option_value_id: string }[];
+  const linked = new Set(links.map((l) => l.variant_id));
+  const usedValues = new Set(links.map((l) => l.option_value_id));
+  const opts = (optRes.data ?? []) as unknown as OptRow[];
+  const adjMax = Math.max(0, ...vars.filter((x) => x.is_active && linked.has(x.id)).map((x) => Number(x.price_adjustment) || 0));
   const editing = sp.v ? vars.find((x) => x.id === sp.v) : undefined;
   const urlOf = (p: string) => sb.storage.from("product-images").getPublicUrl(p).data.publicUrl;
 
@@ -81,6 +97,7 @@ export default async function Page({
         categories={cat.data ?? []}
         product={pr.data as ProductInit}
         cost={cr.data?.cost_price ?? null}
+        adjMax={adjMax}
         primaryUrl={imgs.length ? urlOf((imgs.find((m) => m.is_primary) ?? imgs[0]).storage_path) : null}
       />
 
@@ -131,41 +148,59 @@ export default async function Page({
         <ImageUploader productId={id} />
       </Panel>
 
-      <Panel title="المتغيرات (اللون / المقاس)">
-        {vr.error ? (
-          <Empty>تعذّر تحميل المتغيرات.</Empty>
-        ) : vars.length === 0 ? (
-          <Empty>لا توجد متغيرات. أضف متغيراً إذا كان للمنتج ألوان أو مقاسات بكميات مختلفة.</Empty>
+      <Panel title="الخيارات والتركيبات">
+        {optRes.error ? (
+          <Empty>تعذّر تحميل الخيارات.</Empty>
         ) : (
-          <table className="ds-table" style={{ marginBottom: 18 }}>
-            <thead><tr><th>المتغير</th><th>السعر النهائي</th><th>الكمية</th><th>الحالة</th><th></th></tr></thead>
-            <tbody>
-              {vars.map((x) => (
-                <tr key={x.id}>
-                  <td data-label="المتغير"><strong>{x.sku ?? "-"}</strong>{x.barcode ? <div className="ds-kpi-hint" dir="ltr">{x.barcode}</div> : null}</td>
-                  <td data-label="السعر النهائي">{fmtIQD((pr.data?.price ?? 0) + x.price_adjustment)}</td>
-                  <td data-label="الكمية">{x.track_quantity ? fmtNum(x.quantity) : "من رصيد المنتج"}</td>
-                  <td data-label="الحالة">{x.is_active ? <Badge tone="good">فعّال</Badge> : <Badge>متوقف</Badge>}</td>
-                  <td>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      <Link className="ds-btn" href={`/admin/products/${id}?v=${x.id}#variant`}>تعديل</Link>
-                      <form action={toggleVariant}>
-                        <input type="hidden" name="product_id" value={id} />
-                        <input type="hidden" name="id" value={x.id} />
-                        <input type="hidden" name="next" value={x.is_active ? "0" : "1"} />
-                        <button className="ds-btn" type="submit">{x.is_active ? "إيقاف" : "تفعيل"}</button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <OptionsManager
+            productId={id}
+            activeLinked={vars.some((x) => x.is_active && linked.has(x.id))}
+            options={opts.map((o) => ({
+              id: o.id,
+              name: o.name,
+              kind: o.kind,
+              values: [...(o.product_option_values ?? [])]
+                .sort((a, b) => a.sort_order - b.sort_order)
+                .map((v) => ({ id: v.id, value: v.value, used: usedValues.has(v.id) })),
+            }))}
+          />
         )}
-        <div id="variant">
-          <h3 className="ds-panel-title" style={{ marginBottom: 12 }}>{editing ? "تعديل المتغير" : "إضافة متغير"}</h3>
-          <VariantForm key={editing?.id ?? "new"} productId={id} variant={editing} />
-        </div>
+        <h3 className="ds-panel-title" style={{ margin: "22px 0 12px" }}>التركيبات</h3>
+        {vr.error ? (
+          <Empty>تعذّر تحميل التركيبات.</Empty>
+        ) : vars.length === 0 ? (
+          <Empty>لا توجد تركيبات. أضف خيارًا بقيمه ثم اضغط «إنشاء التركيبات».</Empty>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
+            {vars.map((x) => (
+              <div key={x.id} style={{ border: "1px solid var(--c-line, #ECE6DA)", borderRadius: 12, padding: 12, display: "grid", gap: 6, background: "var(--c-surface, #fff)", minWidth: 0 }}>
+                <strong style={{ overflowWrap: "anywhere" }}>{x.sku ?? "-"}</strong>
+                {x.barcode ? <div className="ds-kpi-hint" dir="ltr">{x.barcode}</div> : null}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {x.is_active ? <Badge tone="good">فعّال</Badge> : <Badge>متوقف</Badge>}
+                  {!linked.has(x.id) ? <Badge tone="warn">قديم غير مربوط</Badge> : null}
+                </div>
+                <div style={{ fontSize: 14 }}>السعر النهائي: {fmtIQD((pr.data?.price ?? 0) + x.price_adjustment)}</div>
+                <div style={{ fontSize: 14 }}>الكمية: {x.track_quantity ? fmtNum(x.quantity) : "من رصيد المنتج"}</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <Link className="ds-btn" href={`/admin/products/${id}?v=${x.id}#variant`}>تعديل</Link>
+                  <form action={toggleVariant}>
+                    <input type="hidden" name="product_id" value={id} />
+                    <input type="hidden" name="id" value={x.id} />
+                    <input type="hidden" name="next" value={x.is_active ? "0" : "1"} />
+                    <button className="ds-btn" type="submit">{x.is_active ? "إيقاف" : "تفعيل"}</button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {editing ? (
+          <div id="variant" style={{ marginTop: 22 }}>
+            <h3 className="ds-panel-title" style={{ marginBottom: 12 }}>تعديل التركيبة</h3>
+            <VariantForm key={editing.id} productId={id} variant={editing} />
+          </div>
+        ) : null}
       </Panel>
     </section>
   );

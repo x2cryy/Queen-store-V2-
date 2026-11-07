@@ -15,13 +15,13 @@ import s from "./product-form.module.css";
 export type ProductInit = {
   id: string; name: string; category_id: string | null; brand: string | null;
   description: string | null; barcode: string | null; price: number; quantity: number;
-  low_stock_threshold: number; status: string; is_featured: boolean; is_new: boolean;
+  low_stock_threshold: number; status: string; is_featured: boolean; is_new: boolean; compare_at_price: number | null;
 };
 
 type Intent = "draft" | "publish" | "save";
 type F = {
   name: string; category_id: string; brand: string; barcode: string; description: string;
-  price: string; cost_price: string; quantity: string; low_stock_threshold: string;
+  price: string; cost_price: string; compare_at_price: string; quantity: string; low_stock_threshold: string;
   is_featured: boolean; is_new: boolean;
 };
 type Pick = { key: string; file: File; preview: string };
@@ -29,7 +29,7 @@ type Pick = { key: string; file: File; preview: string };
 const TYPES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGES = 12;
-const ORDER = ["name", "category_id", "price", "cost_price", "quantity", "low_stock_threshold", "images"];
+const ORDER = ["name", "category_id", "price", "cost_price", "compare_at_price", "quantity", "low_stock_threshold", "images"];
 
 const toNum = (v: string) => Number(v.replace(/,/g, ""));
 const isNum = (v: string) => v.trim() !== "" && Number.isFinite(toNum(v)) && toNum(v) >= 0;
@@ -70,12 +70,13 @@ function Field({ id, label, optional, err, hint, children }: { id: string; label
 }
 
 export function ProductForm({
-  categories, product, cost, primaryUrl,
+  categories, product, cost, primaryUrl, adjMax = 0,
 }: {
   categories: { id: string; name: string }[];
   product?: ProductInit;
   cost?: number | null;
   primaryUrl?: string | null;
+  adjMax?: number;
 }) {
   const p = product;
   const router = useRouter();
@@ -87,6 +88,7 @@ export function ProductForm({
     description: p?.description ?? "",
     price: p ? String(p.price) : "",
     cost_price: cost != null ? String(cost) : "",
+    compare_at_price: p?.compare_at_price != null ? String(p.compare_at_price) : "",
     quantity: p ? String(p.quantity) : "0",
     low_stock_threshold: p ? String(p.low_stock_threshold) : "5",
     is_featured: p?.is_featured ?? false,
@@ -138,6 +140,10 @@ export function ProductForm({
     else if (!isNum(f.price)) e.price = "السعر غير صحيح.";
     else if (intent === "publish" && toNum(f.price) <= 0) e.price = "السعر يجب أن يكون أكبر من صفر للنشر.";
     if (f.cost_price.trim() !== "" && !isNum(f.cost_price)) e.cost_price = "سعر التكلفة غير صحيح.";
+    if (f.compare_at_price.trim() !== "") {
+      if (!isNum(f.compare_at_price)) e.compare_at_price = "السعر قبل الخصم غير صحيح.";
+      else if (isNum(f.price) && toNum(f.compare_at_price) < toNum(f.price)) e.compare_at_price = "يجب ألا يقل عن سعر البيع.";
+    }
     if (!isNum(f.quantity)) e.quantity = "أدخل كمية صحيحة.";
     if (!isNum(f.low_stock_threshold)) e.low_stock_threshold = "أدخل حد تنبيه صحيحًا.";
     if (intent === "publish") {
@@ -170,7 +176,7 @@ export function ProductForm({
     setMsg(null);
     try {
       const fd = new FormData();
-      (["name", "category_id", "brand", "barcode", "description", "price", "cost_price", "quantity", "low_stock_threshold"] as const)
+      (["name", "category_id", "brand", "barcode", "description", "price", "cost_price", "compare_at_price", "quantity", "low_stock_threshold"] as const)
         .forEach((k) => fd.set(k, f[k]));
       if (f.is_featured) fd.set("is_featured", "on");
       if (f.is_new) fd.set("is_new", "on");
@@ -380,6 +386,9 @@ export function ProductForm({
                 <Field id="cost_price" label="سعر التكلفة (د.ع)" optional err={errors.cost_price} hint="يُستعمل لحساب الهامش.">
                   <input className="ds-input" id="cost_price" type="number" min={0} inputMode="numeric" value={f.cost_price} onChange={text("cost_price")} {...aria("cost_price")} />
                 </Field>
+                <Field id="compare_at_price" label="السعر قبل الخصم (د.ع)" optional err={errors.compare_at_price} hint="يُحسب منه خصم المتجر للزبون.">
+                  <input className="ds-input" id="compare_at_price" type="number" min={0} inputMode="numeric" value={f.compare_at_price} onChange={text("compare_at_price")} {...aria("compare_at_price")} />
+                </Field>
               </div>
               <div style={{ marginTop: 14 }}>
                 {costN === null ? (
@@ -388,10 +397,10 @@ export function ProductForm({
                   <Note>أدخل سعر البيع لعرض الهامش.</Note>
                 ) : (
                   <div className="ds-kpi" data-tone={unit < 0 ? "bad" : "good"}>
-                    <span className="ds-kpi-label">الهامش المبدئي للوحدة</span>
-                    <span className="ds-kpi-value">{fmtIQD(unit)}</span>
+                    <span className="ds-kpi-label">{adjMax > 0 ? "الهامش المبدئي للوحدة (يختلف حسب التركيبة)" : "الهامش المبدئي للوحدة"}</span>
+                    <span className="ds-kpi-value">{adjMax > 0 ? fmtIQD(unit) + " – " + fmtIQD(unit + adjMax) : fmtIQD(unit)}</span>
                     <span className="ds-kpi-hint">
-                      {unit < 0 ? "تنبيه: سعر البيع أقل من التكلفة." : priceN ? "هامش " + Math.round((unit / priceN) * 1000) / 10 + "% قبل باقي المصاريف" : ""}
+                      {unit < 0 ? "تنبيه: سعر البيع أقل من التكلفة." : adjMax > 0 ? "من السعر الأساسي حتى أعلى تركيبة، قبل باقي المصاريف." : priceN ? "هامش " + Math.round((unit / priceN) * 1000) / 10 + "% قبل باقي المصاريف" : ""}
                     </span>
                   </div>
                 )}
@@ -411,7 +420,7 @@ export function ProductForm({
                 </Field>
               </div>
               <div style={{ marginTop: 14 }}>
-                <Note>{p ? "الخيارات (اللون والمقاس) تُدار من قسم المتغيرات أسفل هذه الصفحة." : "الخيارات تُضاف من صفحة المنتج بعد حفظه."}</Note>
+                <Note>{p ? "الخيارات (اللون والمقاس) تُدار من قسم «الخيارات والتركيبات» أسفل هذه الصفحة." : "الخيارات تُضاف من صفحة المنتج بعد حفظه."}</Note>
               </div>
             </Section>
 
@@ -436,7 +445,7 @@ export function ProductForm({
             <div className={s.sumImg}>{imgSrc ? <img src={imgSrc} alt="" /> : "لا توجد صورة"}</div>
             <div className={s.sumName}>{f.name.trim() || "بدون اسم"}</div>
             <div className={s.sumRow}><span>التصنيف</span><span>{catName ?? "غير محدد"}</span></div>
-            <div className={s.sumRow}><span>سعر البيع</span><span>{priceN !== null ? fmtIQD(priceN) : "غير محدد"}</span></div>
+            <div className={s.sumRow}><span>سعر البيع</span><span>{priceN !== null ? (adjMax > 0 ? fmtIQD(priceN) + " – " + fmtIQD(priceN + adjMax) : fmtIQD(priceN)) : "غير محدد"}</span></div>
             <div className={s.sumRow}><span>الكمية</span><span>{isNum(f.quantity) ? toNum(f.quantity) : "-"}</span></div>
             <div className={s.sumRow}><span>الحالة</span><span>{status === "hidden" ? "مسودة" : status === "sold_out" ? "نفدت الكمية" : "ظاهر"}</span></div>
             {warns.length ? <ul className={s.warns}>{warns.map((w) => (<li key={w}>{w}</li>))}</ul> : null}
