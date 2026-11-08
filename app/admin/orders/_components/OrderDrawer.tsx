@@ -22,6 +22,9 @@ export type OrderDrawerData = {
   items: { id: string; product_name: string; variant_label: string | null; sku: string | null; unit_price: number; quantity: number; line_total: number }[];
   payments: { id: string; payment_number: string | null; method: string; amount: number; status: string; created_at: string }[];
   history: { id: string; from_label: string | null; to_label: string; note: string | null; created_at: string }[];
+  debt: { id: string; original_amount: number; paid_amount: number; status: string; due_date: string | null } | null;
+  room: number;
+  canDebt: boolean;
 };
 
 const METHOD: Record<string, string> = { cod: "الدفع عند الاستلام", cash: "نقدي", card: "بطاقة", transfer: "تحويل" };

@@ -8,6 +8,7 @@ import {
   StatusForm,
 } from "../../_components/OrderForms";
 import OrderShare from "../../_components/OrderShare";
+import SaveAsDebt from "./SaveAsDebt";
 import { DELIVERY_EDITABLE, whatsappSummary } from "../../../../lib/admin/orders";
 import { formatMoney } from "../../../../lib/admin/format";
 
@@ -56,12 +57,14 @@ export default function OrderActions({ data }: { data: OrderDrawerData }) {
         ) : (
           <details>
             <summary>تسجيل دفعة</summary>
-            <PaymentForm orderId={o.id} remaining={remaining} />
+            <PaymentForm orderId={o.id} remaining={Math.min(remaining, Math.max(0, data.room))} />
           </details>
         )}
       </div>
 
-      {DELIVERY_EDITABLE.includes(o.status) ? (
+      <SaveAsDebt data={data} />
+
+        {DELIVERY_EDITABLE.includes(o.status) ? (
         <details className="ao-card">
           <summary>تعديل التوصيل</summary>
           <DeliveryForm

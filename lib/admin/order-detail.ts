@@ -1,4 +1,6 @@
 import { createClient } from "../supabase/server";
+import { getRole } from "../auth/session";
+import { getMyPermissions } from "./access";
 import { PAYMENT_STATUS_LABEL, statusLabel } from "../shop/orders";
 import type { OrderDrawerData } from "../../app/admin/orders/_components/OrderDrawer";
 
@@ -40,6 +42,36 @@ export async function fetchOrderDrawer(openId: string): Promise<OrderDrawerData 
       .limit(30),
   ]);
   if (!od.data) return null;
+
+  const [dbt, rm, role, perms] = await Promise.all([
+    supabase
+      .from("store_debts")
+      .select("id,original_amount,paid_amount,status,due_date")
+      .eq("order_id", openId)
+      .neq("status", "cancelled")
+      .order("created_at", { ascending: false }),
+    supabase.rpc("fin_order_room", { p_order: openId }),
+    getRole(),
+    getMyPermissions(),
+  ]);
+  const debtRows = (dbt.data ?? []) as {
+    id: string;
+    original_amount: number;
+    paid_amount: number;
+    status: string;
+    due_date: string | null;
+  }[];
+  const debt = debtRows.length
+    ? {
+        id: debtRows[0].id,
+        original_amount: debtRows.reduce((n, d) => n + (Number(d.original_amount) || 0), 0),
+        paid_amount: debtRows.reduce((n, d) => n + (Number(d.paid_amount) || 0), 0),
+        status: debtRows[0].status,
+        due_date: debtRows[0].due_date,
+      }
+    : null;
+  const room = Math.max(0, Number(rm.data) || 0);
+  const canDebt = role === "owner" || perms.includes("store_debts");
   const ro = od.data as unknown as OrderDrawerData["order"];
   return {
     order: {
@@ -48,6 +80,9 @@ export async function fetchOrderDrawer(openId: string): Promise<OrderDrawerData 
       pay_label: PAYMENT_STATUS_LABEL[ro.payment_status] ?? ro.payment_status,
     },
     items: (oi.data ?? []) as unknown as OrderDrawerData["items"],
+    debt,
+    room,
+    canDebt,
     payments: (op.data ?? []) as unknown as OrderDrawerData["payments"],
     history: ((oh.data ?? []) as unknown as Hist[]).map((h) => ({
       id: h.id,
