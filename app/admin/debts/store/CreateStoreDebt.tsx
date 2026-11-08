@@ -6,7 +6,6 @@ import { Modal, useModalClose } from "../_ui/Modal";
 import { useFormAction } from "../_ui/useFormAction";
 import { createStoreDebtAction } from "./_actions";
 import type { DebtResult } from "../../../../lib/finance/debt-result";
-import { newIdem } from "../../../../lib/finance/types";
 import { toDigits, todayIQ } from "../../../../lib/finance/debt-labels";
 
 type Cust = { id: string; full_name: string; phone: string | null };
@@ -23,7 +22,6 @@ export default function CreateStoreDebt({ customers }: { customers: Cust[] }) {
 function CreateForm({ customers }: { customers: Cust[] }) {
   const router = useRouter();
   const close = useModalClose();
-  const [idem, setIdem] = useState(newIdem);
   const [dir, setDir] = useState("");
   const [cust, setCust] = useState("");
   const [party, setParty] = useState("");
@@ -31,7 +29,6 @@ function CreateForm({ customers }: { customers: Cust[] }) {
   const [debtDate, setDebtDate] = useState(todayIQ());
   const { state, pending, onSubmit } = useFormAction<DebtResult>(createStoreDebtAction, (r) => {
     if (r.ok && r.id) {
-      setIdem(newIdem());
       close();
       router.push("/admin/debts/store/" + r.id);
     }
@@ -40,7 +37,6 @@ function CreateForm({ customers }: { customers: Cust[] }) {
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      <input type="hidden" name="idem" value={idem} />
 
       <fieldset className="qd-sec">
         <legend>1. النوع والطرف</legend>

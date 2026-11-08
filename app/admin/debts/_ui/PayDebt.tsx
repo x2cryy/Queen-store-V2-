@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Modal, useModalClose } from "./Modal";
 import { useFormAction } from "./useFormAction";
 import type { DebtResult } from "../../../../lib/finance/debt-result";
-import { PAY_METHODS, newIdem } from "../../../../lib/finance/types";
+import { PAY_METHODS } from "../../../../lib/finance/types";
 import { formatMoney } from "../../../../lib/admin/format";
 import { toDigits, todayIQ } from "../../../../lib/finance/debt-labels";
 
@@ -27,11 +27,9 @@ export default function PayDebt(p: P) {
 function PayForm({ debtId, party, direction, remaining, action, label }: P & { label: string }) {
   const router = useRouter();
   const close = useModalClose();
-  const [idem, setIdem] = useState(newIdem);
   const [amount, setAmount] = useState(String(remaining));
   const { state, pending, onSubmit } = useFormAction<DebtResult>(action, (r) => {
     if (r.ok) {
-      setIdem(newIdem());
       close();
       router.refresh();
     }
@@ -41,7 +39,6 @@ function PayForm({ debtId, party, direction, remaining, action, label }: P & { l
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      <input type="hidden" name="idem" value={idem} />
       <input type="hidden" name="debt_id" value={debtId} />
       <div className="qd-kv"><span>الطرف</span><b>{party}</b></div>
       <div className="qd-kv"><span>المتبقي الحالي</span><b>{formatMoney(remaining)}</b></div>
