@@ -194,7 +194,7 @@ export function AdminShell({ items, user, notifs, children }: { items: Item[]; u
 
           <div className="qs-actions">
             <div className="qs-rel">
-              <button className="qs-icon-btn" aria-label="الإشعارات" onClick={() => { const opening = panel !== "notif"; setPanel(opening ? "notif" : null); if (opening && notifs.unread > 0) void markNotifsRead(); }}>
+              <button className="qs-icon-btn" aria-label="الإشعارات" onClick={() => { const opening = panel !== "notif"; setPanel(opening ? "notif" : null); if (opening && notifs.unread > 0) void markNotifsRead(notifs.items.filter((n) => !n.is_read).map((n) => String(n.id))); }}>
                 <Bell size={18} />
                 {notifs.unread > 0 && <span className="qs-badge">{notifs.unread > 9 ? "9+" : notifs.unread}</span>}
               </button>

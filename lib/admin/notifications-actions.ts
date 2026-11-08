@@ -6,7 +6,7 @@ import { getRole } from "../auth/session";
 
 // Marks the current admin's own per-user notifications (fin_notify rows) as read.
 // audience='admins' rows are shared and have no UPDATE policy, so they are not touched here.
-export async function markNotifsRead(): Promise<{ ok: boolean }> {
+export async function markNotifsRead(adminIds: string[] = []): Promise<{ ok: boolean }> {
   try {
     const role = await getRole();
     if (role !== "owner" && role !== "staff") return { ok: false };
@@ -20,6 +20,11 @@ export async function markNotifsRead(): Promise<{ ok: boolean }> {
       .eq("recipient_user_id", u.user.id)
       .eq("is_read", false);
     if (error) throw error;
+    const ids = adminIds.filter((x) => typeof x === "string" && x.length > 0).slice(0, 50);
+    if (ids.length > 0) {
+      const { error: e2 } = await supabase.rpc("mark_admin_notifs_read", { p_ids: ids });
+      if (e2) throw e2;
+    }
     revalidatePath("/admin", "layout");
     return { ok: true };
   } catch {
