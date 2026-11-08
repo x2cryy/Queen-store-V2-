@@ -6,6 +6,7 @@ export type NavChild = {
   icon: string;
   perms: PermissionKey[];
   match?: string[];
+  ownerOnly?: boolean;
 };
 
 export type NavItem = {
@@ -37,7 +38,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: "wallet",
     perms: ["store_debts", "personal_debts", "installments"],
     children: [
-      { href: "/admin/debts/personal", label: "ديون شخصية", icon: "user", perms: ["personal_debts"] },
+      { href: "/admin/debts/personal", label: "ديون شخصية", icon: "user", perms: ["personal_debts"], ownerOnly: true },
       { href: "/admin/debts/store", label: "ديون المتجر", icon: "store", perms: ["store_debts"] },
       { href: "/admin/debts/installments", label: "الأقساط", icon: "calendar", perms: ["installments"], match: ["/admin/debts/payments"] },
     ],

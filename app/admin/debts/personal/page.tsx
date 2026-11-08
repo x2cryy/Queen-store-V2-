@@ -1,71 +1,152 @@
-import { requireAnyPermission } from "../../../../lib/admin/access";
-import { listPersonalDebts } from "../../../../lib/finance/queries";
-import { iqd } from "../../../../lib/finance/types";
-import { AddDebtForm, PayForm } from "./Forms";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ChevronLeft, X } from "lucide-react";
+import { getRole } from "../../../../lib/auth/session";
+import { formatMoney } from "../../../../lib/admin/format";
+import {
+  PAGE_SIZE,
+  getPersonalSummary,
+  listPersonalDebtsPage,
+  parseFilters,
+} from "../../../../lib/finance/personal";
+import { DIR_LABEL, STATUS_LABEL, effectiveStatus, todayIQ } from "../../../../lib/finance/debt-labels";
+import CreateDebt from "./CreateDebt";
 
-const STATUS: Record<string, string> = {
-  open: "غير مدفوع",
-  partial: "مدفوع جزئياً",
-  paid: "مدفوع بالكامل",
-  cancelled: "ملغي",
-  late: "متأخر",
-};
+export const dynamic = "force-dynamic";
 
-export default async function Page() {
-  await requireAnyPermission(["personal_debts"]);
-  const { rows, error } = await listPersonalDebts();
-  const today = new Date().toISOString().slice(0, 10);
-  const eff = (r: (typeof rows)[number]) =>
-    r.due_date && r.due_date < today && (r.status === "open" || r.status === "partial")
-      ? "late"
-      : r.status;
+type SP = { q?: string; dir?: string; s?: string; p?: string };
+const BASE = "/admin/debts/personal";
 
-  const live = rows.filter((r) => r.status !== "cancelled");
-  const sum = (
-    dir: string,
-    k: "original_amount" | "paid_amount" | "remaining_amount",
-  ) => live.filter((r) => r.direction === dir).reduce((a, r) => a + Number(r[k]), 0);
+export default async function Page({ searchParams }: { searchParams: Promise<SP> }) {
+  if ((await getRole()) !== "owner") redirect("/forbidden");
+  const f = parseFilters(await searchParams);
+  const today = todayIQ();
+  const [list, sum] = await Promise.all([listPersonalDebtsPage(f, today), getPersonalSummary()]);
+  const pages = Math.max(1, Math.ceil(list.total / PAGE_SIZE));
+
+  function href(next: { q?: string; dir?: string; s?: string; p?: number }) {
+    const v = { q: f.q, dir: f.dir as string, s: f.s as string, ...next };
+    const u = new URLSearchParams();
+    if (v.q) u.set("q", v.q);
+    if (v.dir) u.set("dir", v.dir);
+    if (v.s) u.set("s", v.s);
+    if (next.p && next.p > 1) u.set("p", String(next.p));
+    const t = u.toString();
+    return BASE + (t ? "?" + t : "");
+  }
+
+  const hasFilters = !!(f.q || f.dir || f.s);
+  const chips: { label: string; clear: string }[] = [];
+  if (f.q) chips.push({ label: "بحث: " + f.q, clear: href({ q: "" }) });
+  if (f.dir) chips.push({ label: "الاتجاه: " + DIR_LABEL[f.dir], clear: href({ dir: "" }) });
+  if (f.s) chips.push({ label: "الحالة: " + (f.s === "active" ? "مفتوحة" : STATUS_LABEL[f.s]), clear: href({ s: "" }) });
 
   return (
-    <section>
-      <h1 className="qs-h1">الديون الشخصية</h1>
-      <p className="qs-muted">منفصلة تماماً عن مبيعات المتجر وأرباحه.</p>
-      {error && <div className="qa-note qa-err">تعذر تحميل البيانات</div>}
-
-      <div className="qa-card">
-        <div className="qa-row"><span>إجمالي ما عليّ</span><b>{iqd(sum("payable", "original_amount"))}</b></div>
-        <div className="qa-row"><span>المدفوع</span><b>{iqd(sum("payable", "paid_amount"))}</b></div>
-        <div className="qa-row"><span>المتبقي عليّ</span><b>{iqd(sum("payable", "remaining_amount"))}</b></div>
-      </div>
-      <div className="qa-card">
-        <div className="qa-row"><span>إجمالي ما لي</span><b>{iqd(sum("receivable", "original_amount"))}</b></div>
-        <div className="qa-row"><span>المحصل</span><b>{iqd(sum("receivable", "paid_amount"))}</b></div>
-        <div className="qa-row"><span>المتبقي لي</span><b>{iqd(sum("receivable", "remaining_amount"))}</b></div>
-      </div>
-
-      <AddDebtForm />
-
-      {rows.length === 0 && <div className="qa-note">لا توجد ديون مسجلة.</div>}
-      {rows.map((r) => (
-        <div className="qa-card" key={r.id}>
-          <div className="qa-row">
-            <div>
-              <b>{r.party_name}</b>
-              <div className="qs-muted">
-                {r.direction === "payable" ? "عليّ" : "لي"} · {r.debt_date}
-                {r.due_date ? ` · الاستحقاق ${r.due_date}` : ""}
-              </div>
-            </div>
-            <span className="qa-badge">{STATUS[eff(r)] ?? r.status}</span>
-          </div>
-          <div className="qa-row"><span>الأصل</span><span>{iqd(r.original_amount)}</span></div>
-          <div className="qa-row"><span>المدفوع</span><span>{iqd(r.paid_amount)}</span></div>
-          <div className="qa-row"><span>المتبقي</span><b>{iqd(r.remaining_amount)}</b></div>
-          {r.status !== "paid" && r.status !== "cancelled" && (
-            <PayForm debtId={r.id} remaining={Number(r.remaining_amount)} />
-          )}
+    <section className="qd-page">
+      <header className="qd-head">
+        <div>
+          <h1 className="qs-h1">الديون الشخصية</h1>
+          <p className="qs-muted">سجل مستقل لديونك والتزاماتك الشخصية</p>
         </div>
-      ))}
+        <div className="qd-actions"><CreateDebt /></div>
+      </header>
+
+      {sum ? (
+        <div className="qd-sum">
+          <Link className="qd-stat" href={href({ q: "", dir: "receivable", s: "active" })} data-active={f.dir === "receivable" && f.s === "active"}>
+            <span className="qd-stat-label">مبالغ لي</span>
+            <span className="qd-stat-value">{formatMoney(sum.receivable_remaining)}</span>
+            <span className="qd-stat-hint">المتبقي لك عند الآخرين</span>
+          </Link>
+          <Link className="qd-stat" href={href({ q: "", dir: "payable", s: "active" })} data-active={f.dir === "payable" && f.s === "active"}>
+            <span className="qd-stat-label">مبالغ عليّ</span>
+            <span className="qd-stat-value">{formatMoney(sum.payable_remaining)}</span>
+            <span className="qd-stat-hint">المتبقي عليك للآخرين</span>
+          </Link>
+          <Link className="qd-stat" href={href({ q: "", dir: "", s: "active" })} data-active={!f.dir && f.s === "active"}>
+            <span className="qd-stat-label">السجلات المفتوحة</span>
+            <span className="qd-stat-value">{sum.open_count} سجل</span>
+            <span className="qd-stat-hint">مفتوح أو مسدد جزئيًا</span>
+          </Link>
+          <Link className="qd-stat" href={href({ q: "", dir: "", s: "late" })} data-active={!f.dir && f.s === "late"} data-tone={sum.overdue_count > 0 ? "danger" : undefined}>
+            <span className="qd-stat-label">سجلات متأخرة</span>
+            <span className="qd-stat-value">{sum.overdue_count} سجل</span>
+            <span className="qd-stat-hint">لي {formatMoney(sum.overdue_receivable)} · عليّ {formatMoney(sum.overdue_payable)}</span>
+          </Link>
+        </div>
+      ) : (
+        <div className="qd-msg" data-tone="err" role="alert">
+          تعذر تحميل الملخص. <Link href={href({ p: f.page })}>إعادة المحاولة</Link>
+        </div>
+      )}
+
+      <form className="qd-filters" method="get" action={BASE}>
+        <input className="qd-input" name="q" defaultValue={f.q} placeholder="بحث باسم الطرف أو العنوان" aria-label="بحث" />
+        <select className="qd-input" name="dir" defaultValue={f.dir} aria-label="الاتجاه">
+          <option value="">كل الاتجاهات</option>
+          <option value="receivable">لي</option>
+          <option value="payable">عليّ</option>
+        </select>
+        <select className="qd-input" name="s" defaultValue={f.s} aria-label="الحالة">
+          <option value="">كل الحالات</option>
+          <option value="active">مفتوحة</option>
+          <option value="open">مفتوح (بلا دفعات)</option>
+          <option value="partial">مسدد جزئيًا</option>
+          <option value="late">متأخر</option>
+          <option value="paid">مسدد بالكامل</option>
+          <option value="cancelled">ملغي</option>
+        </select>
+        <button type="submit" className="qd-btn">تطبيق</button>
+      </form>
+
+      {hasFilters ? (
+        <div className="qd-chips">
+          {chips.map((c) => (
+            <Link key={c.label} className="qd-chip" href={c.clear} aria-label={"إزالة " + c.label}>{c.label}<X size={14} /></Link>
+          ))}
+          <Link className="qd-chip" href={BASE}>مسح الفلاتر</Link>
+        </div>
+      ) : null}
+
+      {list.error ? (
+        <div className="qd-msg" data-tone="err" role="alert">
+          تعذر تحميل السجلات. <Link href={href({ p: f.page })}>إعادة المحاولة</Link>
+        </div>
+      ) : list.total === 0 ? (
+        <div className="qd-empty">
+          {hasFilters ? "لا توجد نتائج مطابقة للفلاتر." : "لا توجد ديون شخصية بعد. استخدم «إنشاء دين» لإضافة أول سجل."}
+        </div>
+      ) : (
+        <>
+          <div className="qd-count">{list.total} نتيجة</div>
+          <div className="qd-list">
+            {list.rows.map((r) => {
+              const st = effectiveStatus(r.status, r.due_date, today);
+              return (
+                <Link key={r.id} href={BASE + "/" + r.id} className="qd-row">
+                  <div className="qd-cell qd-cell-main">
+                    <b>{r.party_name}</b>
+                    {r.reason ? <span className="qd-sub">{r.reason}</span> : null}
+                  </div>
+                  <div className="qd-cell"><small>الاتجاه</small><span className="qd-badge" data-tone={r.direction}>{DIR_LABEL[r.direction]}</span></div>
+                  <div className="qd-cell"><small>المبلغ الأصلي</small><span>{formatMoney(Number(r.original_amount))}</span></div>
+                  <div className="qd-cell"><small>المتبقي</small><b>{formatMoney(Number(r.remaining_amount))}</b></div>
+                  <div className="qd-cell"><small>الاستحقاق</small><span>{r.due_date ?? "غير محدد"}</span></div>
+                  <div className="qd-cell"><small>الحالة</small><span className="qd-badge" data-tone={st}>{STATUS_LABEL[st] ?? st}</span></div>
+                  <span className="qd-open">فتح التفاصيل <ChevronLeft size={16} /></span>
+                </Link>
+              );
+            })}
+          </div>
+          {pages > 1 ? (
+            <div className="qd-pager">
+              {f.page > 1 ? <Link className="qd-btn" href={href({ p: f.page - 1 })}>السابق</Link> : <span />}
+              <span className="qd-count">صفحة {f.page} من {pages}</span>
+              {f.page < pages ? <Link className="qd-btn" href={href({ p: f.page + 1 })}>التالي</Link> : <span />}
+            </div>
+          ) : null}
+        </>
+      )}
     </section>
   );
 }
