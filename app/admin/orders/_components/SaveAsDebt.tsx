@@ -109,7 +109,7 @@ export default function SaveAsDebt({ data }: { data: OrderDrawerData }) {
         </div>
         <p className="ao-muted">حالة الدين: {DEBT_STATUS[d.status] ?? d.status}</p>
         <Link
-          href="/admin/debts/store"
+          href={"/admin/debts/store/" + d.id}
           style={{ ...ghost, display: "inline-block", textDecoration: "none", textAlign: "center" }}
         >
           عرض الدين

@@ -33,6 +33,7 @@ export const DELIVERY_EDITABLE = ["new", "pending_confirmation", "confirmed", "p
 export type AdminActionState = { ok: boolean; message?: string };
 
 const ADMIN_ERRORS: Record<string, string> = {
+  order_has_debt: "الطلب مرتبط بدين أو قسط، ألغِ الدين أولاً ثم أعد المحاولة.",
   forbidden: "ليست لديك صلاحية لهذه العملية.",
   not_found: "الطلب غير موجود.",
   invalid_transition: "لا يمكن الانتقال إلى هذه الحالة من الحالة الحالية.",

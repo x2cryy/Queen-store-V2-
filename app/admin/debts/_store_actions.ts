@@ -47,6 +47,7 @@ export async function addStoreDebtAction(
   });
   if (!r.ok) return { ok: false, message: r.error };
   revalidatePath("/admin/debts/store");
+  revalidatePath("/admin/debts/store", "layout");
   return { ok: true, message: "تم تسجيل الدين" };
 }
 
@@ -69,5 +70,6 @@ export async function payStoreDebtAction(
   });
   if (!r.ok) return { ok: false, message: r.error };
   revalidatePath("/admin/debts/store");
+  revalidatePath("/admin/debts/store", "layout");
   return { ok: true, message: "تم تسجيل الدفعة" };
 }

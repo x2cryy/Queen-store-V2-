@@ -9,6 +9,7 @@ import {
   statusLabel,
 } from "../../../../lib/shop/orders";
 import PrintButton from "./PrintButton";
+import ReceiptShare from "./ReceiptShare";
 import "../../../_styles/queen-print.css";
 
 export const metadata: Metadata = { title: "طباعة الطلب", robots: { index: false, follow: false } };
@@ -89,6 +90,34 @@ export default async function PrintOrderPage({ params }: { params: Promise<{ id:
     <div className="qp" dir="rtl" lang="ar">
       <div className="qp-bar qp-noprint">
         <PrintButton />
+          <ReceiptShare
+            data={{
+              number: o.order_number,
+              date: formatDateTime(o.created_at),
+              status: statusLabel(o.status),
+              customer: o.customer_name,
+              phone: o.phone,
+              place,
+              address: o.address ?? "",
+              items: items.map((it) => ({
+                name: it.product_name + (it.variant_label ? " (" + it.variant_label + ")" : ""),
+                qty: it.quantity,
+                price: formatMoney(Number(it.unit_price) || 0),
+                total: formatMoney(Number(it.line_total) || 0),
+              })),
+              subtotal: formatMoney(Number(o.subtotal) || 0),
+              discount: Number(o.discount_total) > 0 ? formatMoney(Number(o.discount_total)) : "",
+              delivery: Number(o.delivery_fee) > 0 ? formatMoney(Number(o.delivery_fee)) : "",
+              total: formatMoney(Number(o.total) || 0),
+              paid: formatMoney(paidSum),
+              remaining: closedOrder ? "" : formatMoney(remainingSum),
+              payLabel: PAYMENT_METHOD_LABEL[o.payment_method] ?? o.payment_method,
+              payStatus: PAYMENT_STATUS_LABEL[o.payment_status] ?? o.payment_status,
+              paidN: paidSum,
+              remN: remainingSum,
+              closed: closedOrder,
+            }}
+          />
       </div>
       <div className="qp-top">
         <div>
