@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, Plus, X } from "lucide-react";
-import { requireAnyPermission } from "../../../lib/admin/access";
+import { ArrowRight, Plus, Tag, X } from "lucide-react";
+import { getMyPermissions, requireAnyPermission } from "../../../lib/admin/access";
 import { fmtNum } from "../../../lib/admin/fmt";
 import { CATEGORY_BUCKET, getAdjustTarget, getDetail, getList, getOverview, type Filters } from "../../../lib/admin/inventory";
 import { publicImageUrl } from "../../../lib/shop/images";
@@ -61,7 +61,15 @@ export default async function Page({ searchParams }: { searchParams: Promise<SP>
   const openId = sp.open && UUID.test(sp.open) ? sp.open : "";
   const detail = openId ? await getDetail(openId, catName) : null;
 
-  const create = <Link href="/admin/products/new" className="ds-btn ds-btn-gold"><Plus size={16} /> إنشاء منتج</Link>;
+  const perms = await getMyPermissions();
+  const canProducts = perms.length === 0 || perms.includes("products");
+  const create = canProducts ? <Link href="/admin/products/new" className="ds-btn ds-btn-gold"><Plus size={16} /> إنشاء منتج</Link> : null;
+  const headActions = canProducts ? (
+    <>
+      <Link href="/admin/inventory/categories" className="ds-btn"><Tag size={16} /> إدارة التصنيفات</Link>
+      {create}
+    </>
+  ) : null;
 
   const kpis = [
     { label: "إجمالي المنتجات", value: t.all, hint: "المنتجات الأساسية دون عدد الخيارات", href: "/admin/inventory?c=all", on: c === "all" && !v && !s },
@@ -94,7 +102,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<SP>
 
   return (
     <section className={st.page}>
-      <PageHead title="المخزون" desc="منتجاتك وتصنيفاتها وكمياتها في مكان واحد" actions={create} />
+      <PageHead title="المخزون" desc="منتجاتك وتصنيفاتها وكمياتها في مكان واحد" actions={headActions} />
 
       <div className={st.kpis}>
         {kpis.map((k) => (

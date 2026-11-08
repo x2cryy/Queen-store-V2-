@@ -3,7 +3,7 @@ import { publicImageUrl } from "../shop/images";
 
 export const PAGE_SIZE = 24;
 // اسم bucket صور التصنيفات غير معروف بعد، يُضبط في دفعة التصنيفات
-export const CATEGORY_BUCKET: string | null = null;
+export const CATEGORY_BUCKET: string | null = "product-images";
 
 export type Slim = { id: string; category_id: string | null; quantity: number; low_stock_threshold: number; status: string };
 export type Cat = { id: string; name: string; image_path: string | null; is_active: boolean };
