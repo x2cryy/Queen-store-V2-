@@ -67,3 +67,7 @@ textarea.qd-input{min-height:80px;resize:vertical}
 .qd-choice input{width:20px;height:20px;accent-color:var(--qs-gold,#B89B6A)}
 @media(prefers-reduced-motion:no-preference){.qd-row,.qd-stat{transition:border-color .15s}}
 @media(min-width:900px){.qd-row-store{grid-template-columns:minmax(0,2fr) auto auto minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) auto auto}}
+.qd-badge[data-tone="active"]{color:#2563eb}
+.qd-actions-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+@media(min-width:640px){.qd-row[data-kind="inst"]{grid-template-columns:repeat(3,minmax(0,1fr))}.qd-row[data-kind="inst"] .qd-cell-main,.qd-row[data-kind="inst"] .qd-open{grid-column:1/-1}}
+@media(min-width:1500px){.qd-row[data-kind="inst"]{grid-template-columns:minmax(0,2fr) auto auto repeat(4,minmax(0,1fr)) auto auto;align-items:center}.qd-row[data-kind="inst"] .qd-cell-main,.qd-row[data-kind="inst"] .qd-open{grid-column:auto}}
