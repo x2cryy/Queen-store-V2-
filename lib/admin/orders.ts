@@ -69,6 +69,10 @@ export type SummaryOrder = {
   payment_method: string;
   payment_status: string;
   items: { product_name: string; variant_label: string | null; quantity: number }[];
+  discount_total?: number;
+  delivery_fee?: number;
+  paid?: number;
+  remaining?: number;
 };
 
 export function whatsappSummary(o: SummaryOrder): string {
@@ -91,5 +95,9 @@ export function whatsappSummary(o: SummaryOrder): string {
   lines.push(
     `الدفع: ${PAYMENT_METHOD_LABEL[o.payment_method] ?? o.payment_method} (${PAYMENT_STATUS_LABEL[o.payment_status] ?? o.payment_status})`
   );
+  if (o.discount_total && o.discount_total > 0) lines.push(`الخصم: ${formatPrice(o.discount_total)}`);
+  if (o.delivery_fee && o.delivery_fee > 0) lines.push(`التوصيل: ${formatPrice(o.delivery_fee)}`);
+  if (typeof o.paid === "number") lines.push(`المدفوع: ${formatPrice(o.paid)}`);
+  if (typeof o.remaining === "number") lines.push(`المتبقي: ${formatPrice(o.remaining)}`);
   return lines.join("\n");
 }

@@ -33,6 +33,10 @@ export default function OrderActions({ data }: { data: OrderDrawerData }) {
     payment_method: o.payment_method ?? "",
     payment_status: o.payment_status,
     items: data.items,
+      discount_total: Number(o.discount_total) || 0,
+      delivery_fee: Number(o.delivery_fee) || 0,
+      paid,
+      remaining: closed ? undefined : remaining,
   });
 
   return (

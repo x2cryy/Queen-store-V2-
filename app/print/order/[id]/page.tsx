@@ -68,6 +68,15 @@ export default async function PrintOrderPage({ params }: { params: Promise<{ id:
   const o = oRes.data as unknown as Ord;
   const items = (iRes.data ?? []) as unknown as Item[];
   const place = [o.governorate, o.area].filter(Boolean).join("، ");
+  const { data: payRows } = await supabase
+    .from("payments")
+    .select("amount, status")
+    .eq("order_id", id);
+  const paidSum = ((payRows ?? []) as { amount: number; status: string }[])
+    .filter((r) => r.status === "succeeded")
+    .reduce((n, r) => n + (Number(r.amount) || 0), 0);
+  const remainingSum = Math.max(0, (Number(o.total) || 0) - paidSum);
+  const closedOrder = o.status === "cancelled" || o.status === "returned";
   const { data: qiRowsRaw } = await supabase
     .from("payments")
     .select("provider_reference, status")
@@ -178,6 +187,18 @@ export default async function PrintOrderPage({ params }: { params: Promise<{ id:
           <span>الإجمالي</span>
           <span>{formatMoney(Number(o.total) || 0)}</span>
         </div>
+      </div>
+      <div className="qp-sum">
+        <div>
+          <span>المدفوع</span>
+          <span>{formatMoney(paidSum)}</span>
+        </div>
+        {closedOrder ? null : (
+          <div>
+            <span>المتبقي</span>
+            <span>{formatMoney(remainingSum)}</span>
+          </div>
+        )}
       </div>
       <p style={{ marginTop: 12 }}>
         الدفع: {PAYMENT_METHOD_LABEL[o.payment_method] ?? o.payment_method} (
