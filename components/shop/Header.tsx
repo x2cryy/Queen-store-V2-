@@ -11,9 +11,7 @@ export default function Header({ categories }: { categories: Category[] }) {
     <header className="qm-header">
       <div className="qm-wrap qm-hrow">
         <MobileMenu categories={top} />
-        <Link href="/" className="qm-logo qm-hlogo" aria-label="QUEEN STORE">
-          QUEEN STORE
-        </Link>
+        <Link href="/" className="qm-logo qm-hlogo" aria-label="QUEEN STORE" style={{display:"inline-flex",alignItems:"center",gap:8}}><img src="/brand/q-mark.svg" alt="" style={{height:26,width:"auto",display:"block"}} /><span>QUEEN STORE</span></Link>
         <SearchBox />
         <nav className="qm-icons" aria-label="حسابي والسلة">
           <Link href="/account" className="qm-ib" aria-label="حسابي"><UserIcon /></Link>

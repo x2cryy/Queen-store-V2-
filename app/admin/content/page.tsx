@@ -1,100 +1,85 @@
-import Link from "next/link";
 import { requireAnyPermission } from "../../../lib/admin/access";
 import { createClient } from "../../../lib/supabase/server";
-import { fmtNum, fmtDate } from "../../../lib/admin/fmt";
-import { PageHead, KpiGrid, Panel, Badge, Empty } from "../_components/ui";
-import { toggleBanner, deleteBanner } from "./actions";
-import { BannerForm, SettingForm, type BannerInit } from "./_components/Forms";
+import { getCategories } from "../../../lib/shop/queries";
+import { publicImageUrl } from "../../../lib/shop/images";
+import { normalizeContact, normalizeSections } from "../../../lib/shop/site-content-types";
+import { iqDate, type DBanner } from "../../../lib/admin/content-editor";
+import { Empty, Panel } from "../_components/ui";
+import ContentEditor from "./_components/ContentEditor";
 
-type B = BannerInit & { image_path: string | null };
-type S = { key: string; value: unknown; updated_at: string };
+export const dynamic = "force-dynamic";
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
+type BRow = {
+  id: string;
+  title: string | null;
+  subtitle: string | null;
+  link_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+  image_path: string | null;
+  updated_at: string;
+};
+type SRow = { key: string; value: unknown; updated_at: string };
+
+export default async function Page() {
   await requireAnyPermission(["content"]);
-  const sp = await searchParams;
   const sb = await createClient();
-  const [br, sr] = await Promise.all([
-    sb.from("banners").select("id,title,subtitle,link_url,sort_order,is_active,starts_at,ends_at,image_path").order("sort_order").order("created_at", { ascending: false }),
-    sb.from("site_settings").select("key,value,updated_at").order("key"),
+  const [br, sr, cats] = await Promise.all([
+    sb
+      .from("banners")
+      .select("id,title,subtitle,link_url,sort_order,is_active,starts_at,ends_at,image_path,updated_at")
+      .order("sort_order")
+      .order("created_at", { ascending: false }),
+    sb.from("site_settings").select("key,value,updated_at").in("key", ["home_sections", "contact"]),
+    getCategories().catch(() => []),
   ]);
+
   if (br.error || sr.error) {
     return (
       <section>
-        <PageHead title="المحتوى والمظهر" />
-        <Panel><Empty>تعذّر تحميل المحتوى. حدّث الصفحة وحاول مجدداً.</Empty></Panel>
+        <Panel>
+          <Empty>تعذّر تحميل بيانات المحتوى. حدّث الصفحة وحاول مرة أخرى.</Empty>
+        </Panel>
       </section>
     );
   }
-  const banners = (br.data ?? []) as B[];
-  const settings = ((sr.data ?? []) as S[]).filter((s) => s.key !== "delivery");
-  const active = banners.filter((b) => b.is_active).length;
-  const edit = sp.edit ? banners.find((b) => b.id === sp.edit) : undefined;
-  const last = settings.map((s) => s.updated_at).sort().pop();
-  const url = (p: string | null) => (p ? sb.storage.from("banners").getPublicUrl(p).data.publicUrl : "");
+
+  const rows = (br.data ?? []) as BRow[];
+  const srows = (sr.data ?? []) as SRow[];
+  const sets = new Map(srows.map((r) => [r.key, r] as const));
+
+  const banners: DBanner[] = rows.map((r) => ({
+    key: r.id,
+    id: r.id,
+    title: r.title ?? "",
+    subtitle: r.subtitle ?? "",
+    link_url: r.link_url ?? "",
+    is_active: r.is_active,
+    starts: iqDate(r.starts_at),
+    ends: iqDate(r.ends_at),
+    image_path: r.image_path,
+    src: publicImageUrl("banners", r.image_path),
+    updated_at: r.updated_at,
+    file: null,
+    uploaded: null,
+  }));
+
+  const stamps = [...rows.map((r) => r.updated_at), ...srows.map((r) => r.updated_at)].sort();
+  const version = `${rows.length}|${srows.length}|${stamps[stamps.length - 1] ?? ""}`;
 
   return (
-    <section>
-      <PageHead title="المحتوى والمظهر" desc="بنرات المتجر وإعدادات الواجهة." />
-      <KpiGrid
-        items={[
-          { label: "بنرات فعّالة", value: fmtNum(active), tone: active ? "good" : undefined },
-          { label: "إجمالي البنرات", value: fmtNum(banners.length) },
-          { label: "إعدادات الواجهة", value: fmtNum(settings.length) },
-          { label: "آخر تعديل للإعدادات", value: last ? fmtDate(last) : "-" },
-        ]}
-      />
-      <Panel title={edit ? "تعديل البنر" : "إضافة بنر"}>
-        <BannerForm key={edit?.id ?? "new"} banner={edit} />
-      </Panel>
-      <Panel title="البنرات">
-        {banners.length === 0 ? (
-          <Empty>لا توجد بنرات بعد. أضف أول بنر من النموذج أعلاه.</Empty>
-        ) : (
-          <table className="ds-table">
-            <thead><tr><th>الصورة</th><th>العنوان</th><th>الترتيب</th><th>الحالة</th><th></th></tr></thead>
-            <tbody>
-              {banners.map((b) => (
-                <tr key={b.id}>
-                  <td data-label="الصورة">
-                    {b.image_path ? <img src={url(b.image_path)} alt="" style={{ width: 96, height: 48, objectFit: "cover", borderRadius: 8, border: "1px solid #ECE6DA" }} /> : "-"}
-                  </td>
-                  <td data-label="العنوان"><strong>{b.title}</strong>{b.subtitle ? <div className="ds-kpi-hint">{b.subtitle}</div> : null}</td>
-                  <td data-label="الترتيب">{fmtNum(b.sort_order)}</td>
-                  <td data-label="الحالة">{b.is_active ? <Badge tone="good">فعّال</Badge> : <Badge>متوقف</Badge>}</td>
-                  <td>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      <Link className="ds-btn" href={`/admin/content?edit=${b.id}`}>تعديل</Link>
-                      <form action={toggleBanner}>
-                        <input type="hidden" name="id" value={b.id} />
-                        <input type="hidden" name="next" value={b.is_active ? "0" : "1"} />
-                        <button className="ds-btn" type="submit">{b.is_active ? "إيقاف" : "تفعيل"}</button>
-                      </form>
-                      <form action={deleteBanner}>
-                        <input type="hidden" name="id" value={b.id} />
-                        <button className="ds-btn" style={{ color: "#B91C1C" }} type="submit">حذف</button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Panel>
-      <Panel title="إعدادات الواجهة">
-        {settings.length === 0 ? (
-          <Empty>لا توجد إعدادات.</Empty>
-        ) : (
-          <div style={{ display: "grid", gap: 20 }}>
-            {settings.map((s) => {
-              const t = typeof s.value;
-              const kind = t === "number" ? "number" : t === "boolean" ? "boolean" : t === "string" ? "string" : "json";
-              const v = kind === "json" ? JSON.stringify(s.value, null, 2) : String(s.value);
-              return <SettingForm key={s.key + s.updated_at} k={s.key} kind={kind} value={v} />;
-            })}
-          </div>
-        )}
-      </Panel>
-    </section>
+    <ContentEditor
+      version={version}
+      banners={banners}
+      sections={normalizeSections(sets.get("home_sections")?.value)}
+      contact={normalizeContact(sets.get("contact")?.value)}
+      base={{
+        settings: Object.fromEntries(srows.map((r) => [r.key, r.updated_at])),
+        banners: Object.fromEntries(rows.map((r) => [r.id, r.updated_at])),
+      }}
+      categories={cats.map((c) => ({ slug: c.slug, name: c.name }))}
+    />
   );
 }

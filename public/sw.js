@@ -1,4 +1,4 @@
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC_CACHE = `queen-static-${VERSION}`;
 const OFFLINE_URL = "/offline";
 const NEVER_CACHE = ["/api/", "/auth/", "/admin", "/account", "/checkout", "/chats", "/orders", "/order/", "/track", "/print", "/login", "/register"];
