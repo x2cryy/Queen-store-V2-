@@ -35,14 +35,15 @@ export const getAdminNotifications = cache(async (): Promise<Notifs> => {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("notifications")
-      .select("id, type, title, body, link_url, is_read, created_at")
-      .eq("audience", "admins")
+      .select("id, type, title, body, link_url, is_read, created_at, audience")
+      .in("audience", ["admins", "user"])
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw error;
 
     const visible = (data ?? []).filter((n) => {
       if (role === "owner") return true;
+      if (n.audience === "user") return true;
       const need = permFor(n.type);
       return need !== null && perms.includes(need);
     });
