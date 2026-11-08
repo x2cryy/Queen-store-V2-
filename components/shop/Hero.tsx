@@ -2,7 +2,13 @@ import Link from "next/link";
 import type { Banner } from "../../lib/shop/queries";
 import { publicImageUrl, safeHref } from "../../lib/shop/images";
 
-export default function Hero({ banners }: { banners: Banner[] }) {
+export default function Hero({
+  banners,
+  imageOf,
+}: {
+  banners: Banner[];
+  imageOf?: (b: Banner) => string | null;
+}) {
   if (banners.length === 0) {
     return (
       <section className="qm-hero qm-hero-plain">
@@ -17,7 +23,7 @@ export default function Hero({ banners }: { banners: Banner[] }) {
     <section className="qm-hero" aria-label="العروض">
       <div className="qm-slides">
         {banners.map((b, i) => {
-          const src = publicImageUrl("banners", b.image_path);
+          const src = imageOf ? imageOf(b) : publicImageUrl("banners", b.image_path);
           const href = safeHref(b.link_url) ?? "/products";
           const Title = i === 0 ? "h1" : "h2";
           return (
