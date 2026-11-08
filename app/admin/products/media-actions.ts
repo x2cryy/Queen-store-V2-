@@ -81,7 +81,7 @@ export async function deleteImage(fd: FormData): Promise<void> {
   if (!r.data) return;
   const del = await sb.from("product_images").delete().eq("id", id).eq("product_id", pid);
   if (del.error) return;
-  await sb.storage.from(BUCKET).remove([r.data.storage_path]);
+  // الملف يبقى في التخزين عمدًا؛ التنظيف يدوي (انظر supabase/orphan-images.sql).
   if (r.data.is_primary) {
     const next = await sb.from("product_images").select("id").eq("product_id", pid).order("sort_order").limit(1).maybeSingle();
     if (next.data) await sb.from("product_images").update({ is_primary: true }).eq("id", next.data.id);

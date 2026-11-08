@@ -3,10 +3,12 @@
 import { useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
-type Tab = { key: string; label: string; count: number; content: ReactNode };
+type Tab = { key: string; label: string; count?: number; content: ReactNode };
 
-export function CustomerTabs({ tabs }: { tabs: Tab[] }) {
-  const [active, setActive] = useState(tabs[0]?.key ?? "");
+export function CustomerTabs({ tabs, initial }: { tabs: Tab[]; initial?: string }) {
+  const [active, setActive] = useState(
+    initial && tabs.some((t) => t.key === initial) ? initial : (tabs[0]?.key ?? ""),
+  );
   const current = tabs.find((t) => t.key === active) ?? tabs[0];
   return (
     <div>
@@ -22,7 +24,7 @@ export function CustomerTabs({ tabs }: { tabs: Tab[] }) {
             onClick={() => setActive(t.key)}
           >
             <span>{t.label}</span>
-            <small className="qa-tab-count">{t.count}</small>
+            {t.count !== undefined ? <small className="qa-tab-count">{t.count}</small> : null}
             {active === t.key && (
               <motion.span
                 layoutId="cust-tab-line"

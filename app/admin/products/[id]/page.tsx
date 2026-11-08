@@ -9,6 +9,7 @@ import { VisibilityButton } from "../_components/VisibilityButton";
 import { VariantForm, type VariantInit } from "../_components/MediaForms";
 import { ImageUploader } from "../_components/ImageUploader";
 import { OptionsManager } from "../_components/OptionsManager";
+import { Product360Manager } from "../_components/Product360Manager";
 import { setPrimaryImage, deleteImage, toggleVariant, moveImage } from "../media-actions";
 
 type Img = { id: string; storage_path: string; is_primary: boolean };
@@ -38,6 +39,7 @@ export default async function Page({
   ]);
   if (pr.error || !pr.data) notFound();
 
+  const r360 = await sb.from("product_360_images").select("id,storage_path").eq("product_id", id).order("sort_order");
   const imgs = (im.data ?? []) as Img[];
   const vars = (vr.data ?? []) as VariantInit[];
   type OptRow = { id: string; name: string; kind: string; sort_order: number; product_option_values: { id: string; value: string; sort_order: number }[] | null };
@@ -84,6 +86,11 @@ export default async function Page({
               publish_failed: "حُفظ المنتج كمسودة لكن تعذّر نشره. تحقق من التصنيف والسعر والصور ثم اضغط «نشر المنتج».",
             } as Record<string, string>)[sp.done] ?? ""}
           </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+            {pr.data.status !== "hidden" ? <Link className="ds-btn" href={`/product/${pr.data.slug}`}>عرض في المتجر</Link> : null}
+            <Link className="ds-btn" href="/admin/inventory">العودة إلى المخزون</Link>
+            <Link className="ds-btn" href="/admin/products/new">إنشاء منتج آخر</Link>
+          </div>
         </Panel>
       ) : null}
       {sp.partial ? (
@@ -146,6 +153,20 @@ export default async function Page({
           </div>
         )}
         <ImageUploader productId={id} />
+      </Panel>
+
+      <Panel title="عرض 360 (اختياري)">
+        {r360.error ? (
+          <Empty>هذه الميزة تحتاج تشغيل ملف supabase/phase03_360.sql في Supabase أولًا.</Empty>
+        ) : (
+          <Product360Manager
+            productId={id}
+            images={((r360.data ?? []) as { id: string; storage_path: string }[]).map((x) => ({
+              id: x.id,
+              url: sb.storage.from("product-360").getPublicUrl(x.storage_path).data.publicUrl,
+            }))}
+          />
+        )}
       </Panel>
 
       <Panel title="الخيارات والتركيبات">
