@@ -1,5 +1,6 @@
 "use client";
 
+import { markNotifsRead } from "../../../lib/admin/notifications-actions";
 import ThemeToggle from "./ThemeToggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -193,7 +194,7 @@ export function AdminShell({ items, user, notifs, children }: { items: Item[]; u
 
           <div className="qs-actions">
             <div className="qs-rel">
-              <button className="qs-icon-btn" aria-label="الإشعارات" onClick={() => setPanel(panel === "notif" ? null : "notif")}>
+              <button className="qs-icon-btn" aria-label="الإشعارات" onClick={() => { const opening = panel !== "notif"; setPanel(opening ? "notif" : null); if (opening && notifs.unread > 0) void markNotifsRead(); }}>
                 <Bell size={18} />
                 {notifs.unread > 0 && <span className="qs-badge">{notifs.unread > 9 ? "9+" : notifs.unread}</span>}
               </button>
