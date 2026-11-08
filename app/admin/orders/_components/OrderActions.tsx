@@ -10,7 +10,7 @@ import {
 import OrderShare from "../../_components/OrderShare";
 import SaveAsDebt from "./SaveAsDebt";
 import { DELIVERY_EDITABLE, whatsappSummary } from "../../../../lib/admin/orders";
-import { formatMoney } from "../../../../lib/admin/format";
+import { formatDateTime, formatMoney } from "../../../../lib/admin/format";
 
 export default function OrderActions({ data }: { data: OrderDrawerData }) {
   const o = data.order;
@@ -82,6 +82,24 @@ export default function OrderActions({ data }: { data: OrderDrawerData }) {
       <details className="ao-card">
         <summary>ملاحظة داخلية</summary>
         <NoteForm orderId={o.id} />
+          {data.notes.length > 0 ? (
+            <ul style={{ listStyle: "none", margin: "10px 0 0", padding: 0 }}>
+              {data.notes.map((n) => (
+                <li
+                  key={n.id}
+                  style={{
+                    padding: "8px 0",
+                    borderTop: "1px solid var(--c-line-soft, #F1ECE2)",
+                    fontSize: 14,
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  <div>{n.body}</div>
+                  <small style={{ color: "var(--c-muted, #6B6458)" }}>{formatDateTime(n.created_at)}</small>
+                </li>
+              ))}
+            </ul>
+          ) : null}
       </details>
 
       <details className="ao-card">

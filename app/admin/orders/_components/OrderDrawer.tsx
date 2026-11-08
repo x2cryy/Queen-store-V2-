@@ -25,6 +25,7 @@ export type OrderDrawerData = {
   debt: { id: string; original_amount: number; paid_amount: number; status: string; due_date: string | null } | null;
   room: number;
   canDebt: boolean;
+  notes: { id: string; body: string; created_at: string }[];
 };
 
 const METHOD: Record<string, string> = { cod: "الدفع عند الاستلام", cash: "نقدي", card: "بطاقة", transfer: "تحويل" };

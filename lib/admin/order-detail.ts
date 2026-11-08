@@ -43,7 +43,7 @@ export async function fetchOrderDrawer(openId: string): Promise<OrderDrawerData 
   ]);
   if (!od.data) return null;
 
-  const [dbt, rm, role, perms] = await Promise.all([
+  const [dbt, rm, role, perms, nt] = await Promise.all([
     supabase
       .from("store_debts")
       .select("id,original_amount,paid_amount,status,due_date")
@@ -53,6 +53,12 @@ export async function fetchOrderDrawer(openId: string): Promise<OrderDrawerData 
     supabase.rpc("fin_order_room", { p_order: openId }),
     getRole(),
     getMyPermissions(),
+    supabase
+      .from("order_notes")
+      .select("id,body,created_at")
+      .eq("order_id", openId)
+      .order("created_at", { ascending: false })
+      .limit(30),
   ]);
   const debtRows = (dbt.data ?? []) as {
     id: string;
@@ -83,6 +89,7 @@ export async function fetchOrderDrawer(openId: string): Promise<OrderDrawerData 
     debt,
     room,
     canDebt,
+    notes: (nt.data ?? []) as OrderDrawerData["notes"],
     payments: (op.data ?? []) as unknown as OrderDrawerData["payments"],
     history: ((oh.data ?? []) as unknown as Hist[]).map((h) => ({
       id: h.id,
