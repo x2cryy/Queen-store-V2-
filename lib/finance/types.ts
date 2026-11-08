@@ -1,9 +1,8 @@
-export type PayMethod = "cash" | "transfer" | "qi_card" | "other";
+export type PayMethod = "cash" | "transfer" | "other";
 
 export const PAY_METHODS: { value: PayMethod; label: string }[] = [
   { value: "cash", label: "نقداً" },
   { value: "transfer", label: "تحويل" },
-  { value: "qi_card", label: "Qi Card" },
   { value: "other", label: "أخرى" },
 ];
 
