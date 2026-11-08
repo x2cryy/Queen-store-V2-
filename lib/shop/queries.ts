@@ -86,25 +86,25 @@ export const getBanners = cache(async (): Promise<Banner[]> => {
   return (data ?? []) as unknown as Banner[];
 });
 
-export const getFeatured = cache(async (): Promise<ProductCardData[]> => {
+export const getFeatured = cache(async (limit: number = 8): Promise<ProductCardData[]> => {
   const sb = createPublicClient();
   const { data, error } = await sb
     .from("products")
     .select(PRODUCT_SELECT)
     .eq("is_featured", true)
     .order("created_at", { ascending: false })
-    .limit(8);
+    .limit(limit);
   if (error) throw error;
   return ((data ?? []) as unknown as Row[]).map(toCard);
 });
 
-export const getLatest = cache(async (): Promise<ProductCardData[]> => {
+export const getLatest = cache(async (limit: number = 8): Promise<ProductCardData[]> => {
   const sb = createPublicClient();
   const { data, error } = await sb
     .from("products")
     .select(PRODUCT_SELECT)
     .order("created_at", { ascending: false })
-    .limit(8);
+    .limit(limit);
   if (error) throw error;
   return ((data ?? []) as unknown as Row[]).map(toCard);
 });

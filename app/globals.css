@@ -219,3 +219,5 @@
 .qm-dis{opacity:.5;cursor:not-allowed}
 .qm-sum-more{display:block;margin-top:14px;text-align:center}
 /* QM5-END */
+
+@media (min-width:700px){.qm-fgrid.qm-fgrid-4{grid-template-columns:2fr 1fr 1fr 1fr}}
