@@ -27,3 +27,9 @@ const AR = "٠١٢٣٤٥٦٧٨٩";
 const FA = "۰۱۲۳۴۵۶۷۸۹";
 export const toDigits = (v: string) =>
   v.replace(/[٠-٩۰-۹]/g, (d) => String(AR.indexOf(d) >= 0 ? AR.indexOf(d) : FA.indexOf(d)));
+
+export const STORE_DIR_LABEL: Record<string, string> = { receivable: "للمتجر", payable: "على المتجر" };
+export const STORE_DIR_LONG: Record<string, string> = {
+  receivable: "مستحق للمتجر بذمة الطرف",
+  payable: "مستحق على المتجر للطرف",
+};

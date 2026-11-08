@@ -62,6 +62,7 @@ export async function saveOrderAsDebt(input: {
       if (m.includes("not allowed")) return fail("ليست لديك صلاحية الديون");
       if (m.includes("exceeds")) return fail("المبلغ أكبر من المتاح للدين على هذا الطلب");
       if (m.includes("store_debts_check")) return fail("تاريخ الاستحقاق قبل تاريخ الدين");
+    if (m.includes("store_debts_order_active_uq")) return fail("هذا الطلب محفوظ كدين بالفعل.");
       return fail("تعذّر حفظ الدين");
     }
 

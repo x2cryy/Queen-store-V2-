@@ -66,3 +66,4 @@ textarea.qd-input{min-height:80px;resize:vertical}
 .qd-choice:has(input:checked){border-color:var(--qs-gold,#B89B6A);box-shadow:inset 0 0 0 1px var(--qs-gold,#B89B6A)}
 .qd-choice input{width:20px;height:20px;accent-color:var(--qs-gold,#B89B6A)}
 @media(prefers-reduced-motion:no-preference){.qd-row,.qd-stat{transition:border-color .15s}}
+@media(min-width:900px){.qd-row-store{grid-template-columns:minmax(0,2fr) auto auto minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) auto auto}}

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal, useModalClose } from "../_ui/Modal";
 import { useFormAction } from "../_ui/useFormAction";
-import { createDebtAction, type DebtResult } from "./_actions";
+import { createDebtAction } from "./_actions";
+import type { DebtResult } from "../../../../lib/finance/debt-result";
 import { PAY_METHODS, newIdem } from "../../../../lib/finance/types";
 import { formatMoney } from "../../../../lib/admin/format";
 import { toDigits, todayIQ } from "../../../../lib/finance/debt-labels";
@@ -22,24 +23,21 @@ export default function CreateDebt() {
 function CreateForm() {
   const router = useRouter();
   const close = useModalClose();
-  const { state, pending, onSubmit } = useFormAction<DebtResult>(createDebtAction);
   const [idem, setIdem] = useState(newIdem);
   const [dir, setDir] = useState("");
   const [amount, setAmount] = useState("");
   const [paid, setPaid] = useState("");
   const [debtDate, setDebtDate] = useState(todayIQ());
+  const { state, pending, onSubmit } = useFormAction<DebtResult>(createDebtAction, (r) => {
+    if (r.ok && r.id) {
+      setIdem(newIdem());
+      close();
+      router.push("/admin/debts/personal/" + r.id);
+    }
+  });
   const total = num(amount);
   const paidN = num(paid);
   const canSubmit = !!dir && total > 0 && paidN >= 0 && paidN <= total;
-
-  useEffect(() => {
-    if (state?.ok && state.id) {
-      setIdem(newIdem());
-      close();
-      router.push("/admin/debts/personal/" + state.id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state]);
 
   const paidLabel =
     dir === "receivable"

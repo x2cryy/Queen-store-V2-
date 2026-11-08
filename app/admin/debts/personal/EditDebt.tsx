@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Modal, useModalClose } from "../_ui/Modal";
 import { useFormAction } from "../_ui/useFormAction";
-import { updateDebtAction, type DebtResult } from "./_actions";
+import { updateDebtAction } from "./_actions";
+import type { DebtResult } from "../../../../lib/finance/debt-result";
 
 type D = {
   id: string;
@@ -27,11 +27,12 @@ export default function EditDebt({ d }: { d: D }) {
 function EditForm({ d }: { d: D }) {
   const router = useRouter();
   const close = useModalClose();
-  const { state, pending, onSubmit } = useFormAction<DebtResult>(updateDebtAction);
-  useEffect(() => {
-    if (state?.ok) { close(); router.refresh(); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state]);
+  const { state, pending, onSubmit } = useFormAction<DebtResult>(updateDebtAction, (r) => {
+    if (r.ok) {
+      close();
+      router.refresh();
+    }
+  });
   return (
     <form onSubmit={onSubmit} noValidate>
       <input type="hidden" name="id" value={d.id} />

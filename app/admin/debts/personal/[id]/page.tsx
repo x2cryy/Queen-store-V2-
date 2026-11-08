@@ -5,9 +5,10 @@ import { formatMoney } from "../../../../../lib/admin/format";
 import { getPersonalDebtDetail } from "../../../../../lib/finance/personal";
 import { DIR_LONG, METHOD_LABEL, STATUS_LABEL, effectiveStatus, todayIQ } from "../../../../../lib/finance/debt-labels";
 import { ReverseForm } from "../../payments/ReverseForm";
-import PayDebt from "../PayDebt";
+import PayDebt from "../../_ui/PayDebt";
 import EditDebt from "../EditDebt";
-import CancelDebt from "../CancelDebt";
+import CancelDebt from "../../_ui/CancelDebt";
+import { cancelDebtAction, payDebtAction } from "../_actions";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </p>
         </div>
         <div className="qd-actions">
-          {!cancelled && left > 0 ? <PayDebt debtId={d.id} party={d.party_name} direction={d.direction} remaining={left} /> : null}
+          {!cancelled && left > 0 ? <PayDebt action={payDebtAction} debtId={d.id} party={d.party_name} direction={d.direction} remaining={left} /> : null}
           {!cancelled ? <EditDebt d={d} /> : null}
         </div>
       </header>
@@ -105,7 +106,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       {!cancelled ? (
         <div className="qd-card">
           <h2>إجراءات حساسة</h2>
-          {paid === 0 ? <CancelDebt id={d.id} /> : <p className="qs-muted">لا يمكن إلغاء دين عليه دفعات. اعكس الدفعات أولًا إن لزم.</p>}
+          {paid === 0 ? <CancelDebt action={cancelDebtAction} id={d.id} hint="لا يُحذف الدين: يبقى في السجل بحالة «ملغي» ولا يدخل الملخصات. متاح فقط لدين بلا أي دفعات." /> : <p className="qs-muted">لا يمكن إلغاء دين عليه دفعات. اعكس الدفعات أولًا إن لزم.</p>}
         </div>
       ) : null}
     </section>

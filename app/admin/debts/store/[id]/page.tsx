@@ -1,140 +1,134 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireAnyPermission } from "../../../../../lib/admin/access";
-import { getStoreDebt } from "../../../../../lib/finance/queries";
-import { createClient } from "../../../../../lib/supabase/server";
-import { iqd } from "../../../../../lib/finance/types";
-import { PayStoreForm } from "../Forms";
+import { getMyPermissions, requireAnyPermission } from "../../../../../lib/admin/access";
+import { formatMoney } from "../../../../../lib/admin/format";
+import { getStoreDebtDetail } from "../../../../../lib/finance/store";
+import { METHOD_LABEL, STATUS_LABEL, STORE_DIR_LONG, effectiveStatus, todayIQ } from "../../../../../lib/finance/debt-labels";
+import { ReverseForm } from "../../payments/ReverseForm";
+import PayDebt from "../../_ui/PayDebt";
+import CancelDebt from "../../_ui/CancelDebt";
+import EditStoreDebt from "../EditStoreDebt";
+import { cancelStoreDebtAction, payStoreDebtAction } from "../_actions";
 
 export const dynamic = "force-dynamic";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const STATUS: Record<string, string> = {
-  open: "غير مدفوع",
-  partial: "مدفوع جزئياً",
-  paid: "مدفوع بالكامل",
-  cancelled: "ملغي",
-  late: "متأخر",
-};
-const METHOD: Record<string, string> = { cash: "نقدي", transfer: "تحويل", card: "بطاقة", manual: "يدوي", qi_card: "كي كارد" };
 
-type Debt = {
-  id: string;
-  customer_id: string | null;
-  party_name: string;
-  original_amount: number;
-  paid_amount: number;
-  debt_date: string;
-  due_date: string | null;
-  order_id: string | null;
-  reason: string | null;
-  notes: string | null;
-  status: string;
-};
-type Pay = {
-  id: string;
-  amount: number;
-  paid_at: string;
-  method: string;
-  reference: string | null;
-  note: string | null;
-  reversed_at: string | null;
-  reversal_reason: string | null;
-};
-
-export default async function StoreDebtPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   await requireAnyPermission(["store_debts"]);
+  const perms = await getMyPermissions();
   const { id } = await params;
   if (!UUID.test(id)) notFound();
+  const { debt: d, payments, receipts, orderNumber, customer, error } = await getStoreDebtDetail(id);
+  if (error && !d)
+    return (
+      <section className="qd-page">
+        <div className="qd-msg" data-tone="err" role="alert">تعذر تحميل الدين. <Link href={"/admin/debts/store/" + id}>إعادة المحاولة</Link></div>
+      </section>
+    );
+  if (!d) notFound();
 
-  const { debt, pays } = await getStoreDebt(id);
-  if (!debt) notFound();
-  const d = debt as unknown as Debt;
-  const rows = (pays ?? []) as unknown as Pay[];
-
-  let orderNumber: string | null = null;
-  if (d.order_id) {
-    const sb = await createClient();
-    const { data } = await sb.from("orders").select("order_number").eq("id", d.order_id).maybeSingle();
-    orderNumber = (data as { order_number: string } | null)?.order_number ?? null;
-  }
-
-  const original = Number(d.original_amount) || 0;
-  const paid = Number(d.paid_amount) || 0;
+  const today = todayIQ();
+  const original = Number(d.original_amount);
+  const paid = Number(d.paid_amount);
   const left = Math.max(0, original - paid);
-  const today = new Date().toISOString().slice(0, 10);
-  const late = d.due_date && d.due_date < today && (d.status === "open" || d.status === "partial");
-  const statusKey = late ? "late" : d.status;
-  const canPay = d.status !== "cancelled" && left > 0;
+  const st = effectiveStatus(d.status, d.due_date, today);
+  const cancelled = d.status === "cancelled";
+  const recByPay = new Map(receipts.filter((r) => r.debt_payment_id).map((r) => [r.debt_payment_id as string, r]));
+  const canOrder = perms.includes("orders");
+  const canCustomer = perms.includes("customers");
 
   return (
-    <section>
-      <p className="qs-muted">
-        <Link href="/admin/debts/store">العودة إلى ديون المتجر</Link>
-      </p>
-      <h1 className="qs-h1">{d.party_name}</h1>
-      <p className="qs-muted">
-        حالة الدين: {STATUS[statusKey] ?? d.status}
-        {d.due_date ? " - الاستحقاق: " + d.due_date : ""}
-      </p>
+    <section className="qd-page">
+      <p className="qs-muted"><Link href="/admin/debts/store">ديون المتجر</Link></p>
+      <header className="qd-head">
+        <div>
+          <h1 className="qs-h1">{d.party_name}</h1>
+          <p className="qs-muted">
+            <span className="qd-badge" data-tone={d.direction}>{STORE_DIR_LONG[d.direction]}</span>{" "}
+            <span className="qd-badge" data-tone={st}>{STATUS_LABEL[st] ?? st}</span>{" "}
+            <span dir="ltr">#{d.id.slice(0, 8)}</span>
+          </p>
+        </div>
+        <div className="qd-actions">
+          {!cancelled && left > 0 ? <PayDebt action={payStoreDebtAction} debtId={d.id} party={d.party_name} direction={d.direction} remaining={left} /> : null}
+          {!cancelled ? <EditStoreDebt d={{ id: d.id, party_name: d.party_name, due_date: d.due_date, debt_date: d.debt_date, reason: d.reason, notes: d.notes, linked: !!d.customer_id || !!d.order_id }} /> : null}
+        </div>
+      </header>
 
-      <div className="qa-card">
-        <div className="qa-row"><span>مبلغ الدين</span><b>{iqd(original)}</b></div>
-        <div className="qa-row"><span>المسدد</span><b>{iqd(paid)}</b></div>
-        <div className="qa-row"><span>المتبقي</span><b>{iqd(left)}</b></div>
-        <div className="qa-row"><span>تاريخ الدين</span><b>{d.debt_date}</b></div>
-        {orderNumber ? (
-          <div className="qa-row">
-            <span>الطلب المرتبط</span>
-            <b>
-              <Link href={"/admin/orders/" + d.order_id}>{orderNumber}</Link>
-            </b>
-          </div>
-        ) : null}
-        {d.customer_id ? (
-          <div className="qa-row">
-            <span>ملف العميل</span>
-            <b>
-              <Link href={"/admin/customers/" + d.customer_id}>فتح الملف</Link>
-            </b>
-          </div>
-        ) : null}
-        {d.reason ? <div className="qa-row"><span>السبب</span><b>{d.reason}</b></div> : null}
-        {d.notes ? <div className="qa-row"><span>ملاحظة</span><b>{d.notes}</b></div> : null}
+      <div className="qd-sum">
+        <div className="qd-stat"><span className="qd-stat-label">المبلغ الأصلي</span><span className="qd-stat-value">{formatMoney(original)}</span></div>
+        <div className="qd-stat"><span className="qd-stat-label">{d.direction === "receivable" ? "المستلم" : "المسدد"}</span><span className="qd-stat-value">{formatMoney(paid)}</span></div>
+        <div className="qd-stat" data-tone={st === "late" ? "danger" : undefined}><span className="qd-stat-label">المتبقي</span><span className="qd-stat-value">{formatMoney(left)}</span></div>
       </div>
 
-      {canPay ? (
-        <div className="qa-card">
-          <h2>تسجيل دفعة</h2>
-          <PayStoreForm debtId={d.id} remaining={left} />
+      <div className="qd-card">
+        <h2>البيانات</h2>
+        <div className="qd-kv"><span>النطاق</span><span>المتجر</span></div>
+        <div className="qd-kv"><span>المصدر</span>
+          <span>
+            {d.order_id ? (
+              canOrder ? <Link href={"/admin/orders/" + d.order_id}>طلب <span dir="ltr">#{orderNumber ?? "…"}</span></Link>
+                : <>طلب <span dir="ltr">#{orderNumber ?? "…"}</span></>
+            ) : "سجل يدوي"}
+          </span>
+        </div>
+        {d.customer_id ? (
+          <div className="qd-kv"><span>العميل</span>
+            <span>{canCustomer ? <Link href={"/admin/customers/" + d.customer_id}>{customer?.full_name ?? "ملف العميل"}</Link> : (customer?.full_name ?? "عميل مسجل")}</span>
+          </div>
+        ) : null}
+        {customer?.phone ? <div className="qd-kv"><span>الهاتف</span><span dir="ltr">{customer.phone}</span></div> : null}
+        <div className="qd-kv"><span>تاريخ البداية</span><span>{d.debt_date}</span></div>
+        <div className="qd-kv"><span>الاستحقاق</span><span>{d.due_date ?? "غير محدد"}</span></div>
+        {d.reason ? <div className="qd-kv"><span>السبب</span><span>{d.reason}</span></div> : null}
+        {d.notes ? <div className="qd-kv"><span>الملاحظات</span><span>{d.notes}</span></div> : null}
+      </div>
+
+      <div className="qd-card">
+        <h2>سجل الدفعات</h2>
+        {error ? <div className="qd-msg" data-tone="err" role="alert">تعذر تحميل الدفعات.</div> : null}
+        {payments.length === 0 && !error ? <p className="qs-muted">لا توجد دفعات على هذا الدين.</p> : null}
+        {payments.map((p) => {
+          const rec = recByPay.get(p.id);
+          return (
+            <div className="qd-pay" key={p.id} data-reversed={p.reversed_at ? "true" : "false"}>
+              <div className="qd-pay-top">
+                <span>{p.paid_at} · {METHOD_LABEL[p.method] ?? p.method}{p.reference ? " · " + p.reference : ""}</span>
+                <b className="qd-pay-amount">{formatMoney(Number(p.amount))}</b>
+              </div>
+              {p.note ? <span className="qd-sub">{p.note}</span> : null}
+              {p.reversed_at ? (
+                <span className="qd-badge" data-tone="late">معكوسة{p.reversal_reason ? ": " + p.reversal_reason : ""}</span>
+              ) : (
+                <>
+                  {rec && rec.status === "issued" ? (
+                    <Link href={"/print/receipt/" + rec.id} target="_blank" rel="noopener noreferrer">
+                      {d.direction === "receivable" ? "وصل استلام " : "وصل تسديد "}{rec.receipt_number}
+                    </Link>
+                  ) : null}
+                  <details className="qd-details">
+                    <summary>عكس الدفعة (تصحيح)</summary>
+                    <ReverseForm kind="store" id={p.id} />
+                  </details>
+                </>
+              )}
+            </div>
+          );
+        })}
+        {payments.length >= 100 ? <p className="qd-hint">عُرضت آخر 100 دفعة.</p> : null}
+      </div>
+
+      {!cancelled ? (
+        <div className="qd-card">
+          <h2>إجراءات حساسة</h2>
+          {paid === 0 ? (
+            <CancelDebt action={cancelStoreDebtAction} id={d.id} hint="لا يُحذف الدين: يبقى في السجل بحالة «ملغي». إن كان مرتبطًا بطلب فيعود مبلغه إلى المتبقي القابل للحفظ كدين. متاح فقط لدين بلا أي دفعات." />
+          ) : (
+            <p className="qs-muted">لا يمكن إلغاء دين عليه دفعات. اعكس الدفعات أولًا إن لزم.</p>
+          )}
         </div>
       ) : null}
-
-      <div className="qa-card">
-        <h2>سجل الدفعات</h2>
-        {rows.length === 0 ? (
-          <p className="qs-muted">لا توجد دفعات مسجلة على هذا الدين.</p>
-        ) : (
-          rows.map((p) => (
-            <div
-              key={p.id}
-              className="qa-row"
-              style={{ flexWrap: "wrap", textDecoration: p.reversed_at ? "line-through" : "none" }}
-            >
-              <span>
-                {p.paid_at} - {METHOD[p.method] ?? p.method}
-                {p.reference ? " - " + p.reference : ""}
-              </span>
-              <b>{iqd(Number(p.amount) || 0)}</b>
-              {p.reversed_at ? (
-                <small style={{ width: "100%", textDecoration: "none" }}>
-                  ملغاة{p.reversal_reason ? ": " + p.reversal_reason : ""}
-                </small>
-              ) : null}
-            </div>
-          ))
-        )}
-      </div>
     </section>
   );
 }

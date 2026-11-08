@@ -1,17 +1,32 @@
 "use client";
 
-import { startTransition, useActionState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 
-// Submits through startTransition so React does NOT reset the form after a failed save.
-export function useFormAction<S>(action: (prev: S | null, f: FormData) => Promise<S | null>) {
-  const [state, dispatch, pending] = useActionState<S | null, FormData>(action, null);
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+// Calls the server action from the submit handler (no effects, no form reset on failure).
+export function useFormAction<S extends { ok: boolean; message: string }>(
+  action: (prev: S | null, f: FormData) => Promise<S | null>,
+  onDone?: (s: S) => void,
+) {
+  const [state, setState] = useState<S | null>(null);
+  const [pending, setPending] = useState(false);
+  const busy = useRef(false);
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (pending) return;
+    if (busy.current) return;
     const fd = new FormData(e.currentTarget);
-    startTransition(() => {
-      dispatch(fd);
-    });
+    busy.current = true;
+    setPending(true);
+    try {
+      const r = await action(null, fd);
+      setState(r);
+      if (r && onDone) onDone(r);
+    } catch {
+      setState({ ok: false, message: "تعذر الاتصال بالخادم، تحقق من الاتصال وحاول مرة أخرى." } as S);
+    } finally {
+      busy.current = false;
+      setPending(false);
+    }
   }
   return { state, pending, onSubmit };
 }

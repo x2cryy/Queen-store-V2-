@@ -1,43 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Modal, useModalClose } from "../_ui/Modal";
-import { useFormAction } from "../_ui/useFormAction";
-import { payDebtAction, type DebtResult } from "./_actions";
+import { Modal, useModalClose } from "./Modal";
+import { useFormAction } from "./useFormAction";
+import type { DebtResult } from "../../../../lib/finance/debt-result";
 import { PAY_METHODS, newIdem } from "../../../../lib/finance/types";
 import { formatMoney } from "../../../../lib/admin/format";
 import { toDigits, todayIQ } from "../../../../lib/finance/debt-labels";
 
 const num = (v: string) => Number(toDigits(v).replace(/[,\s٬]/g, "")) || 0;
 
-type P = { debtId: string; party: string; direction: string; remaining: number };
+type Action = (prev: DebtResult | null, f: FormData) => Promise<DebtResult | null>;
+type P = { debtId: string; party: string; direction: string; remaining: number; action: Action };
 
 export default function PayDebt(p: P) {
   const label = p.direction === "receivable" ? "استلام دفعة" : "تسديد دفعة";
+  // key = remaining: when the balance changes the form remounts with fresh values.
   return (
     <Modal trigger={label} title={label} tone="primary">
-      <PayForm {...p} label={label} />
+      <PayForm key={p.remaining} {...p} label={label} />
     </Modal>
   );
 }
 
-function PayForm({ debtId, party, direction, remaining, label }: P & { label: string }) {
+function PayForm({ debtId, party, direction, remaining, action, label }: P & { label: string }) {
   const router = useRouter();
   const close = useModalClose();
-  const { state, pending, onSubmit } = useFormAction<DebtResult>(payDebtAction);
   const [idem, setIdem] = useState(newIdem);
   const [amount, setAmount] = useState(String(remaining));
+  const { state, pending, onSubmit } = useFormAction<DebtResult>(action, (r) => {
+    if (r.ok) {
+      setIdem(newIdem());
+      close();
+      router.refresh();
+    }
+  });
   const n = num(amount);
   const valid = n > 0 && n <= remaining;
-
-  useEffect(() => { setAmount(String(remaining)); }, [remaining]);
-  useEffect(() => {
-    if (!state) return;
-    if (state.ok) { setIdem(newIdem()); close(); router.refresh(); }
-    else if (state.stale) router.refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state]);
 
   return (
     <form onSubmit={onSubmit} noValidate>
@@ -46,7 +46,7 @@ function PayForm({ debtId, party, direction, remaining, label }: P & { label: st
       <div className="qd-kv"><span>الطرف</span><b>{party}</b></div>
       <div className="qd-kv"><span>المتبقي الحالي</span><b>{formatMoney(remaining)}</b></div>
       <div className="qd-grid2" style={{ marginTop: 12 }}>
-        <label className="qd-field">{label === "استلام دفعة" ? "المبلغ المستلم (د.ع)" : "المبلغ المسدد (د.ع)"}
+        <label className="qd-field">{direction === "receivable" ? "المبلغ المستلم (د.ع)" : "المبلغ المسدد (د.ع)"}
           <input className="qd-input" name="amount" inputMode="numeric" dir="ltr" autoComplete="off" value={amount} onChange={(e) => setAmount(toDigits(e.target.value))} required />
         </label>
         <label className="qd-field">التاريخ
@@ -67,6 +67,7 @@ function PayForm({ debtId, party, direction, remaining, label }: P & { label: st
       {n > remaining ? (<div className="qd-msg" data-tone="err" role="alert">المبلغ أكبر من المتبقي.</div>) : null}
       {valid ? (<p className="qd-hint">المتبقي بعد الدفعة: {formatMoney(remaining - n)}</p>) : null}
       {state && !state.ok ? (<div className="qd-msg" data-tone="err" role="alert">{state.message}</div>) : null}
+      {state?.stale ? (<button type="button" className="qd-btn" onClick={() => router.refresh()}>تحديث الرصيد</button>) : null}
       <button type="submit" className="qd-btn qd-btn-primary" disabled={pending || !valid} style={{ width: "100%", marginTop: 12 }}>
         {pending ? "جارٍ الحفظ…" : direction === "receivable" ? "تأكيد الاستلام" : "تأكيد التسديد"}
       </button>

@@ -1,124 +1,163 @@
+import Link from "next/link";
+import { ChevronLeft, X } from "lucide-react";
 import { requireAnyPermission } from "../../../../lib/admin/access";
-import { listStoreDebts } from "../../../../lib/finance/queries";
-import { createClient } from "../../../../lib/supabase/server";
-import { iqd } from "../../../../lib/finance/types";
-import { AddStoreDebtForm, PayStoreForm } from "./Forms";
+import { formatMoney } from "../../../../lib/admin/format";
+import {
+  STORE_PAGE_SIZE,
+  getStoreSummary,
+  listCustomersForPicker,
+  listStoreDebtsPage,
+  parseStoreFilters,
+} from "../../../../lib/finance/store";
+import { STATUS_LABEL, STORE_DIR_LABEL, effectiveStatus, todayIQ } from "../../../../lib/finance/debt-labels";
+import CreateStoreDebt from "./CreateStoreDebt";
 
-const STATUS: Record<string, string> = {
-  open: "غير مدفوع",
-  partial: "مدفوع جزئياً",
-  paid: "مدفوع بالكامل",
-  cancelled: "ملغي",
-  late: "متأخر",
-};
+export const dynamic = "force-dynamic";
 
-export default async function Page({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string; s?: string }>;
-}) {
+type SP = { q?: string; dir?: string; s?: string; src?: string; p?: string };
+const BASE = "/admin/debts/store";
+
+export default async function Page({ searchParams }: { searchParams: Promise<SP> }) {
   await requireAnyPermission(["store_debts"]);
-  const { q = "", s = "" } = await searchParams;
-  const { rows, error } = await listStoreDebts();
+  const f = parseStoreFilters(await searchParams);
+  const today = todayIQ();
+  const [list, sum, customers] = await Promise.all([listStoreDebtsPage(f, today), getStoreSummary(), listCustomersForPicker()]);
+  const pages = Math.max(1, Math.ceil(list.total / STORE_PAGE_SIZE));
 
-  const sb = await createClient();
-  const { data: customers } = await sb
-    .from("customers")
-    .select("id, full_name, phone")
-    .order("full_name");
-
-  const today = new Date().toISOString().slice(0, 10);
-  type Row = (typeof rows)[number];
-  const eff = (r: Row) =>
-    r.due_date && r.due_date < today && (r.status === "open" || r.status === "partial")
-      ? "late"
-      : r.status;
-
-  const live = rows.filter((r) => r.status !== "cancelled");
-  const total = live.reduce((a, r) => a + Number(r.original_amount), 0);
-  const paid = live.reduce((a, r) => a + Number(r.paid_amount), 0);
-  const left = live.reduce((a, r) => a + Number(r.remaining_amount), 0);
-  const lateRows = live.filter((r) => eff(r) === "late");
-  const late = lateRows.reduce((a, r) => a + Number(r.remaining_amount), 0);
-
-  const byCustomer = new Map<string, { name: string; left: number }>();
-  for (const r of live) {
-    const rem = Number(r.remaining_amount);
-    if (rem <= 0) continue;
-    const key = r.customer_id ?? r.party_name;
-    const cur = byCustomer.get(key) ?? { name: r.party_name, left: 0 };
-    cur.left += rem;
-    byCustomer.set(key, cur);
+  function href(next: { q?: string; dir?: string; s?: string; src?: string; p?: number }) {
+    const v = { q: f.q, dir: f.dir as string, s: f.s as string, src: f.src as string, ...next };
+    const u = new URLSearchParams();
+    if (v.q) u.set("q", v.q);
+    if (v.dir) u.set("dir", v.dir);
+    if (v.s) u.set("s", v.s);
+    if (v.src) u.set("src", v.src);
+    if (next.p && next.p > 1) u.set("p", String(next.p));
+    const t = u.toString();
+    return BASE + (t ? "?" + t : "");
   }
 
-  const shown = rows.filter(
-    (r) =>
-      (!q || r.party_name.includes(q)) && (!s || eff(r) === s),
-  );
+  const hasFilters = !!(f.q || f.dir || f.s || f.src);
+  const chips: { label: string; clear: string }[] = [];
+  if (f.q) chips.push({ label: "بحث: " + f.q, clear: href({ q: "" }) });
+  if (f.dir) chips.push({ label: "النوع: " + STORE_DIR_LABEL[f.dir], clear: href({ dir: "" }) });
+  if (f.src) chips.push({ label: "المصدر: " + (f.src === "order" ? "طلب" : "سجل يدوي"), clear: href({ src: "" }) });
+  if (f.s) chips.push({ label: "الحالة: " + (f.s === "active" ? "مفتوحة" : STATUS_LABEL[f.s]), clear: href({ s: "" }) });
 
   return (
-    <section>
-      <h1 className="qs-h1">ديون المتجر</h1>
-      <p className="qs-muted">
-        المبالغ المستحقة للمتجر على الزبائن. المبيعات الآجلة لا تُحسب أموالاً محصلة.
-      </p>
-      {error && <div className="qa-note qa-err">تعذر تحميل البيانات</div>}
+    <section className="qd-page">
+      <header className="qd-head">
+        <div>
+          <h1 className="qs-h1">ديون المتجر</h1>
+          <p className="qs-muted">ديون العملاء الناتجة عن الطلبات، وما يُسجَّل يدويًا للمتجر أو عليه</p>
+        </div>
+        <div className="qd-actions"><CreateStoreDebt customers={customers} /></div>
+      </header>
 
-      <div className="qa-card">
-        <div className="qa-row"><span>إجمالي المستحق للمتجر</span><b>{iqd(total)}</b></div>
-        <div className="qa-row"><span>المحصل فعلياً</span><b>{iqd(paid)}</b></div>
-        <div className="qa-row"><span>الرصيد المتبقي</span><b>{iqd(left)}</b></div>
-        <div className="qa-row"><span>المتأخر ({lateRows.length})</span><b>{iqd(late)}</b></div>
-      </div>
+      {sum ? (
+        <div className="qd-sum">
+          <Link className="qd-stat" href={href({ q: "", dir: "receivable", s: "active" })} data-active={f.dir === "receivable" && f.s === "active"}>
+            <span className="qd-stat-label">مستحق للمتجر</span>
+            <span className="qd-stat-value">{formatMoney(sum.receivable_remaining)}</span>
+            <span className="qd-stat-hint">المتبقي بذمة العملاء والأطراف</span>
+          </Link>
+          <Link className="qd-stat" href={href({ q: "", dir: "payable", s: "active" })} data-active={f.dir === "payable" && f.s === "active"}>
+            <span className="qd-stat-label">مستحق على المتجر</span>
+            <span className="qd-stat-value">{formatMoney(sum.payable_remaining)}</span>
+            <span className="qd-stat-hint">المتبقي على المتجر للآخرين</span>
+          </Link>
+          <Link className="qd-stat" href={href({ q: "", dir: "", s: "active" })} data-active={!f.dir && f.s === "active"}>
+            <span className="qd-stat-label">الديون المفتوحة</span>
+            <span className="qd-stat-value">{sum.open_count} سجل</span>
+            <span className="qd-stat-hint">مفتوح أو مسدد جزئيًا</span>
+          </Link>
+          <Link className="qd-stat" href={href({ q: "", dir: "", s: "late" })} data-active={!f.dir && f.s === "late"} data-tone={sum.overdue_count > 0 ? "danger" : undefined}>
+            <span className="qd-stat-label">ديون متأخرة</span>
+            <span className="qd-stat-value">{sum.overdue_count} سجل</span>
+            <span className="qd-stat-hint">للمتجر {formatMoney(sum.overdue_receivable)} · على المتجر {formatMoney(sum.overdue_payable)}</span>
+          </Link>
+        </div>
+      ) : (
+        <div className="qd-msg" data-tone="err" role="alert">
+          تعذر تحميل الملخص. <Link href={href({ p: f.page })}>إعادة المحاولة</Link>
+        </div>
+      )}
 
-      <div className="qa-card">
-        <b>زبائن لديهم أرصدة مستحقة</b>
-        {byCustomer.size === 0 && <div className="qs-muted">لا توجد أرصدة.</div>}
-        {[...byCustomer.values()]
-          .sort((a, b) => b.left - a.left)
-          .map((c) => (
-            <div className="qa-row" key={c.name}>
-              <span>{c.name}</span>
-              <b>{iqd(c.left)}</b>
-            </div>
-          ))}
-      </div>
-
-      <AddStoreDebtForm customers={customers ?? []} />
-
-      <form className="qa-form" method="get">
-        <input className="qa-input" name="q" defaultValue={q} placeholder="بحث باسم الزبون" />
-        <select className="qa-input" name="s" defaultValue={s}>
-          <option value="">كل الحالات</option>
-          {Object.entries(STATUS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
+      <form className="qd-filters" method="get" action={BASE}>
+        <input className="qd-input" name="q" defaultValue={f.q} placeholder="بحث باسم الطرف أو السبب أو رقم الطلب" aria-label="بحث" />
+        <select className="qd-input" name="dir" defaultValue={f.dir} aria-label="النوع">
+          <option value="">كل الأنواع</option>
+          <option value="receivable">للمتجر</option>
+          <option value="payable">على المتجر</option>
         </select>
-        <button className="qa-btn">تطبيق</button>
+        <select className="qd-input" name="src" defaultValue={f.src} aria-label="المصدر">
+          <option value="">كل المصادر</option>
+          <option value="order">من طلب</option>
+          <option value="manual">سجل يدوي</option>
+        </select>
+        <select className="qd-input" name="s" defaultValue={f.s} aria-label="الحالة">
+          <option value="">كل الحالات</option>
+          <option value="active">مفتوحة</option>
+          <option value="open">مفتوح (بلا دفعات)</option>
+          <option value="partial">مسدد جزئيًا</option>
+          <option value="late">متأخر</option>
+          <option value="paid">مسدد بالكامل</option>
+          <option value="cancelled">ملغي</option>
+        </select>
+        <button type="submit" className="qd-btn">تطبيق</button>
       </form>
 
-      {shown.length === 0 && <div className="qa-note">لا توجد ديون مطابقة.</div>}
-      {shown.map((r) => (
-        <div className="qa-card" key={r.id}>
-          <div className="qa-row">
-            <div>
-              <b>{r.party_name}</b>
-              <div className="qs-muted">
-                {r.debt_date}
-                {r.due_date ? ` · الاستحقاق ${r.due_date}` : ""}
-                {r.order_id ? " · مرتبط بطلب" : ""}
-              </div>
-            </div>
-            <span className="qa-badge">{STATUS[eff(r)] ?? r.status}</span>
-          </div>
-          <div className="qa-row"><span>الأصل</span><span>{iqd(r.original_amount)}</span></div>
-          <div className="qa-row"><span>المحصل</span><span>{iqd(r.paid_amount)}</span></div>
-          <div className="qa-row"><span>المتبقي</span><b>{iqd(r.remaining_amount)}</b></div>
-          {r.status !== "paid" && r.status !== "cancelled" && (
-            <PayStoreForm debtId={r.id} remaining={Number(r.remaining_amount)} />
-          )}
+      {hasFilters ? (
+        <div className="qd-chips">
+          {chips.map((c) => (
+            <Link key={c.label} className="qd-chip" href={c.clear} aria-label={"إزالة " + c.label}>{c.label}<X size={14} /></Link>
+          ))}
+          <Link className="qd-chip" href={BASE}>مسح الفلاتر</Link>
         </div>
-      ))}
+      ) : null}
+
+      {list.error ? (
+        <div className="qd-msg" data-tone="err" role="alert">
+          تعذر تحميل السجلات. <Link href={href({ p: f.page })}>إعادة المحاولة</Link>
+        </div>
+      ) : list.total === 0 ? (
+        <div className="qd-empty">
+          {hasFilters ? "لا توجد نتائج مطابقة للفلاتر." : "لا توجد ديون متجر بعد. تُنشأ ديون الطلبات من زر «حفظ كدين» داخل الطلب، أو استخدم «إنشاء دين»."}
+        </div>
+      ) : (
+        <>
+          <div className="qd-count">{list.total} نتيجة</div>
+          <div className="qd-list">
+            {list.rows.map((r) => {
+              const st = effectiveStatus(r.status, r.due_date, today);
+              return (
+                <Link key={r.id} href={BASE + "/" + r.id} className="qd-row qd-row-store">
+                  <div className="qd-cell qd-cell-main">
+                    <b>{r.party_name}</b>
+                    {r.reason ? <span className="qd-sub">{r.reason}</span> : null}
+                  </div>
+                  <div className="qd-cell"><small>المصدر</small>
+                    <span>{r.order_id ? <>طلب <span dir="ltr">#{r.order_number ?? "…"}</span></> : "سجل يدوي"}</span>
+                  </div>
+                  <div className="qd-cell"><small>النوع</small><span className="qd-badge" data-tone={r.direction}>{STORE_DIR_LABEL[r.direction]}</span></div>
+                  <div className="qd-cell"><small>المبلغ الأصلي</small><span>{formatMoney(Number(r.original_amount))}</span></div>
+                  <div className="qd-cell"><small>المسدد</small><span>{formatMoney(Number(r.paid_amount))}</span></div>
+                  <div className="qd-cell"><small>المتبقي</small><b>{formatMoney(Number(r.remaining_amount))}</b></div>
+                  <div className="qd-cell"><small>الاستحقاق</small><span>{r.due_date ?? "غير محدد"}</span></div>
+                  <div className="qd-cell"><small>الحالة</small><span className="qd-badge" data-tone={st}>{STATUS_LABEL[st] ?? st}</span></div>
+                  <span className="qd-open">فتح التفاصيل <ChevronLeft size={16} /></span>
+                </Link>
+              );
+            })}
+          </div>
+          {pages > 1 ? (
+            <div className="qd-pager">
+              {f.page > 1 ? <Link className="qd-btn" href={href({ p: f.page - 1 })}>السابق</Link> : <span />}
+              <span className="qd-count">صفحة {f.page} من {pages}</span>
+              {f.page < pages ? <Link className="qd-btn" href={href({ p: f.page + 1 })}>التالي</Link> : <span />}
+            </div>
+          ) : null}
+        </>
+      )}
     </section>
   );
 }
