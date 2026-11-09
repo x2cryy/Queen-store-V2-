@@ -12,14 +12,14 @@ export function fmtDateTime(iso: string | null): string {
   return `${formatDate(d.slice(0, 10))} · ${h % 12 || 12}:${m} ${h < 12 ? "ص" : "م"}`;
 }
 
-export type Tone = "green" | "red" | "amber" | "blue";
+export type Tone = "green" | "red" | "amber" | "blue" | "gray";
 
 export function statusInfo(r: Pick<TransferRow, "status" | "has_proof">): { label: string; tone: Tone } {
   if (r.status === "pending") {
-    return r.has_proof ? { label: "بانتظار المراجعة", tone: "blue" } : { label: "بانتظار الإثبات", tone: "amber" };
+    return r.has_proof ? { label: "بانتظار المراجعة", tone: "amber" } : { label: "بانتظار الإثبات", tone: "blue" };
   }
   if (r.status === "succeeded") return { label: "مؤكد", tone: "green" };
   if (r.status === "failed") return { label: "مرفوض", tone: "red" };
-  if (r.status === "refunded") return { label: "مسترد", tone: "amber" };
+  if (r.status === "refunded") return { label: "مسترد", tone: "gray" };
   return { label: r.status || "-", tone: "amber" };
 }

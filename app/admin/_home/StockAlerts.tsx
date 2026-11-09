@@ -27,7 +27,7 @@ export default function StockAlerts({ sec }: { sec: Sec<StockData> }) {
         <>
           <ul className="hp-list">
             {items.map((s) => (
-              <li key={s.id} className="hp-row">
+              <li key={s.id} className="hp-row hp-row-stock">
                 <span className="hp-row-ico">
                   <Package size={20} aria-hidden />
                 </span>

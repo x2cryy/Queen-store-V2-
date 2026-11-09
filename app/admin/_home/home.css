@@ -186,3 +186,47 @@ html[data-theme="dark"] .hp-root{
 @container (min-width:720px){
   .hp-order{grid-template-columns:minmax(0,1fr) auto auto auto}
 }
+/* ===== حركة خفيفة وتفاعل (المرحلة 1) ===== */
+@keyframes hp-fade-up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.hp-root .hp-card{animation:hp-fade-up .22s ease-out both;transition:box-shadow .18s ease-out,border-color .18s ease-out,transform .15s ease-out}
+.hp-root .hp-card:nth-child(2){animation-delay:40ms}
+.hp-root .hp-card:nth-child(3){animation-delay:80ms}
+.hp-root .hp-card:nth-child(4){animation-delay:120ms}
+.hp-root .hp-card:hover{border-color:var(--hp-focus)}
+.hp-root .hp-list .hp-row{animation:hp-fade-up .2s ease-out both}
+.hp-root .hp-list .hp-row:nth-child(2){animation-delay:30ms}
+.hp-root .hp-list .hp-row:nth-child(3){animation-delay:60ms}
+.hp-root .hp-list .hp-row:nth-child(4){animation-delay:90ms}
+.hp-root button,.hp-root .hp-link{transition:transform .15s ease-out,background .18s ease-out,opacity .15s ease-out}
+.hp-root button:active{transform:scale(.97)}
+.hp-root .hp-link:focus-visible,.hp-root button:focus-visible{outline:2px solid var(--hp-focus);outline-offset:2px}
+/* صف تنبيه المخزون كله قابل للضغط */
+.hp-root .hp-row-stock{position:relative;border-radius:12px;transition:background .18s ease-out,transform .15s ease-out}
+.hp-root .hp-row-stock .hp-link::after{content:"";position:absolute;inset:0;border-radius:12px}
+.hp-root .hp-row-stock:hover{background:var(--hp-surface-2)}
+.hp-root .hp-row-stock:active{transform:scale(.99)}
+.hp-root .hp-row-stock .hp-pill{font-weight:800}
+@media (prefers-reduced-motion:reduce){.hp-root *{animation:none!important;transition:none!important}}
+/* ===== تحسين بطاقات الملخص ===== */
+.hp-root .hp-kpis{gap:14px}
+.hp-root .hp-kpi-ico{width:36px;height:36px;border-radius:10px;transition:transform .15s ease-out}
+.hp-root .hp-kpis .hp-card:nth-child(1) .hp-kpi-ico{color:var(--hp-blue);background:var(--hp-blue-bg)}
+.hp-root .hp-kpis .hp-card:nth-child(2) .hp-kpi-ico{color:var(--hp-amber);background:var(--hp-amber-bg)}
+.hp-root .hp-kpis .hp-card:nth-child(3) .hp-kpi-ico{color:var(--hp-green);background:var(--hp-green-bg)}
+.hp-root .hp-kpis .hp-card:nth-child(4) .hp-kpi-ico{color:var(--hp-blue);background:var(--hp-blue-bg)}
+.hp-root .hp-kpi-val{font-size:30px;letter-spacing:-.3px}
+.hp-root .hp-kpi-top{font-size:14px}
+.hp-root .hp-h2{font-size:18px}
+.hp-root .hp-kpis .hp-card:hover{box-shadow:0 6px 18px rgba(0,0,0,.10)}
+.hp-root .hp-kpis .hp-card:hover .hp-kpi-ico{transform:scale(1.06)}
+/* ===== الإجراءات السريعة: أيقونات ملونة بخفة ===== */
+.hp-root .hp-q{transition:background .18s ease-out,border-color .18s ease-out,transform .15s ease-out,box-shadow .18s ease-out}
+.hp-root .hp-q:hover{border-color:var(--hp-focus);box-shadow:0 4px 14px rgba(0,0,0,.08);transform:translateY(-1px)}
+.hp-root .hp-q:active{transform:scale(.98)}
+.hp-root .hp-q:focus-visible{outline:2px solid var(--hp-focus);outline-offset:2px}
+.hp-root .hp-q-ico{transition:transform .15s ease-out}
+.hp-root .hp-q:hover .hp-q-ico{transform:scale(1.07)}
+.hp-root .hp-quick>.hp-q:nth-child(3n+1) .hp-q-ico{color:var(--hp-blue);background:var(--hp-blue-bg)}
+.hp-root .hp-quick>.hp-q:nth-child(3n+2) .hp-q-ico{color:var(--hp-green);background:var(--hp-green-bg)}
+.hp-root .hp-quick>.hp-q:nth-child(3n) .hp-q-ico{color:var(--hp-amber);background:var(--hp-amber-bg)}
+.hp-root .hp-q-sub{color:var(--hp-muted);opacity:1}

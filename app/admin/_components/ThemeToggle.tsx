@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import "../../_styles/queen-theme.css";
+import "../../_styles/status-pills.css";
 
 type Theme = "light" | "dark";
 

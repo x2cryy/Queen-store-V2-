@@ -280,7 +280,7 @@ export default function TransfersClient({ today, period, status, q, page, summar
                           </span>
                           <span className="qp-cell">
                             <small>المبلغ المقدم</small>
-                            <b>{fmtMoney(r.amount)}</b>
+                            <b className="st-amt">{fmtMoney(r.amount)}</b>
                           </span>
                           <span className="qp-cell">
                             <small>وقت التقديم</small>

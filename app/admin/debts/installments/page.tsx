@@ -12,7 +12,7 @@ import {
   listInstallmentsPage,
   parseInstFilters,
 } from "../../../../lib/finance/installments";
-import { listCustomersLite } from "../../../../lib/finance/store";
+import { listCustomersForPicker } from "../../../../lib/finance/store";
 import { DIR_LABEL, STORE_DIR_LABEL, todayIQ } from "../../../../lib/finance/debt-labels";
 import CreatePlan from "./CreatePlan";
 
@@ -32,7 +32,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<SP>
   const [list, sum, customers] = await Promise.all([
     listInstallmentsPage(f),
     getInstSummary(f.scope),
-    listCustomersLite(),
+    listCustomersForPicker(),
   ]);
   const pages = Math.max(1, Math.ceil(list.total / INST_PAGE_SIZE));
 

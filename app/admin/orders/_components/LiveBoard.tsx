@@ -362,8 +362,8 @@ export function LiveBoard({ initial, initialFailed }: { initial: LiveOrder[]; in
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.18 }}
                   style={{
-                    border: "1px solid " + (isFresh ? "var(--c-gold-dark, #7D6335)" : "var(--c-line, #ECE6DA)"),
-                    boxShadow: isFresh ? "0 0 0 3px rgba(184,155,106,.35)" : "none",
+                    border: "1px solid " + (isFresh ? "var(--st-blue, #1d4fa8)" : "var(--c-line, #ECE6DA)"),
+                    boxShadow: isFresh ? "0 0 0 3px var(--st-blue-bg, #e2ecfa)" : "none",
                     borderRadius: 12,
                     background: "var(--c-surface, #fff)",
                     padding: 12,
