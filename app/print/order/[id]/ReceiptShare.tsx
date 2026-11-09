@@ -114,6 +114,7 @@ async function render(d: ReceiptData): Promise<Blob | null> {
   const itemsEnd = rowsY + d.items.length * ROW_H + 30;
   const H = itemsEnd + totals.length * TOT_H + 14 + 60 + 290 + 40;
 
+  const logoImg = await new Promise<HTMLImageElement>((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(im); im.src = "/brand/q-mark.svg"; });
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -141,6 +142,7 @@ async function render(d: ReceiptData): Promise<Blob | null> {
   ctx.textAlign = "center";
   ctx.font = "700 60px " + FONT;
   ctx.fillText("QUEEN STORE", W / 2, 96);
+  if (logoImg.naturalWidth) ctx.drawImage(logoImg, W / 2 - 22, 34, 44, 44);
   ctx.direction = "rtl";
   ctx.font = "600 28px " + FONT;
   ctx.fillStyle = "#E9DFC9";

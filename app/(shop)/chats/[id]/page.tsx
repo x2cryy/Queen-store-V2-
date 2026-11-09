@@ -19,7 +19,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   return (
     <div className="fixed inset-0 z-50 bg-[#FBF7EF] md:static md:z-auto md:mx-auto md:my-6 md:h-[80dvh] md:max-w-3xl md:overflow-hidden md:rounded-2xl md:border md:border-[#B89B6A]/40">
       <ChatRoom chatId={id} role="customer" meId={user.id} folderUid={user.id} customerId={c.customer_id}
-        title="QUEEN STORE" subtitle={subtitle} closed={c.status !== "open"} backHref="/chats" />
+        title="QUEEN STORE" subtitle={subtitle} productId={c.product_id} closed={c.status !== "open"} backHref="/chats" />
     </div>
   );
 }

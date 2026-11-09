@@ -4,6 +4,7 @@ import MobileMenu from "./MobileMenu";
 import SearchBox from "./SearchBox";
 import CartLink from "./CartLink";
 import { UserIcon } from "./icons";
+import { Heart, MessageCircle } from "lucide-react";
 
 export default function Header({ categories }: { categories: Category[] }) {
   const top = categories.filter((c) => c.parent_id == null);
@@ -15,14 +16,15 @@ export default function Header({ categories }: { categories: Category[] }) {
         <SearchBox />
         <nav className="qm-icons" aria-label="حسابي والسلة">
           <Link href="/account" className="qm-ib" aria-label="حسابي"><UserIcon /></Link>
+          <Link href="/favorites" className="qm-ib qm-fav-link" aria-label="المفضلة"><Heart size={20} /></Link>
+          <Link href="/chats" className="qm-ib" aria-label="محادثاتي"><MessageCircle size={20} /></Link>
           <CartLink />
         </nav>
       </div>
       <nav className="qm-wrap qm-cats-d" aria-label="الأقسام">
-        <Link href="/products">جميع المنتجات</Link>
-        {top.slice(0, 8).map((c) => (
-          <Link key={c.id} href={`/category/${encodeURIComponent(c.slug)}`}>{c.name}</Link>
-        ))}
+        <Link href="/">الرئيسية</Link>
+        <Link href="/categories">الأقسام</Link>
+        <Link href="/products">المنتجات</Link>
       </nav>
     </header>
   );

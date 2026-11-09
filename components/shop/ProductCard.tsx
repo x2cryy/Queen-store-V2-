@@ -3,11 +3,13 @@ import type { ProductCardData } from "../../lib/shop/queries";
 import { publicImageUrl } from "../../lib/shop/images";
 import { formatPrice } from "../../lib/shop/format";
 
+import FavButton from "./FavButton";
 export default function ProductCard({ p }: { p: ProductCardData }) {
   const src = publicImageUrl("product-images", p.image);
   const href = `/product/${encodeURIComponent(p.slug)}`;
   return (
     <article className="qm-card">
+      <FavButton slug={p.slug} overlay />
       <Link href={href} className="qm-card-img" aria-label={p.name}>
         {src ? (
           // eslint-disable-next-line @next/next/no-img-element

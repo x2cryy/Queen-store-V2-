@@ -63,7 +63,7 @@ export default function QiTransfer({ orderId, userId, recipientName, cardNumber,
       return;
     }
     if (file && file.size > 5 * 1024 * 1024) {
-      setMsg({ ok: false, text: "حجم الصورة أكبر من 5MB." });
+      setMsg({ ok: false, text: "الصورة كبيرة، اختر صورة أصغر." });
       return;
     }
     setBusy(true);
@@ -132,7 +132,7 @@ export default function QiTransfer({ orderId, userId, recipientName, cardNumber,
           <input id="qi-ref" className="qo-input" dir="ltr" maxLength={80} value={reference} onChange={(e) => setReference(e.target.value)} />
         </div>
         <div className="qo-field">
-          <label htmlFor="qi-proof">صورة الإيصال (JPG أو PNG أو WEBP، حتى 5MB)</label>
+          <label htmlFor="qi-proof">صورة الإيصال</label>
           <input id="qi-proof" ref={fileRef} className="qo-input" type="file" accept="image/jpeg,image/png,image/webp" />
         </div>
         {msg ? (

@@ -48,6 +48,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </p>
         </div>
         <div className="qd-actions">
+          <Link href={"/print/debt/personal/" + d.id} target="_blank" rel="noopener noreferrer" className="qd-btn">كشف الدين</Link>
+          <Link href={"/print/person/" + encodeURIComponent(d.party_name)} target="_blank" rel="noopener noreferrer" className="qd-btn">كشف شامل</Link>
+          <Link href={"/print/person/" + encodeURIComponent(d.party_name) + "?scope=open"} target="_blank" rel="noopener noreferrer" className="qd-btn">كشف غير المسدد</Link>
           {!cancelled && left > 0 ? <PayDebt action={payDebtAction} debtId={d.id} party={d.party_name} direction={d.direction} remaining={left} /> : null}
           {!cancelled ? <EditDebt d={d} /> : null}
         </div>
@@ -58,6 +61,27 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         <div className="qd-stat"><span className="qd-stat-label">{d.direction === "receivable" ? "المستلم" : "المسدد"}</span><span className="qd-stat-value">{formatMoney(paid)}</span></div>
         <div className="qd-stat" data-tone={st === "late" ? "danger" : undefined}><span className="qd-stat-label">المتبقي</span><span className="qd-stat-value">{formatMoney(left)}</span></div>
       </div>
+
+        {Array.isArray(d.items) && d.items.length > 0 ? (
+          <div className="qd-card">
+            <h2>تفاصيل الأغراض</h2>
+            <table className="ds-table">
+              <thead>
+                <tr><th>المادة</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr>
+              </thead>
+              <tbody>
+                {d.items.map((it, i) => (
+                  <tr key={i}>
+                    <td data-label="المادة">{it.name}</td>
+                    <td data-label="الكمية">{it.qty}</td>
+                    <td data-label="سعر الوحدة">{formatMoney(it.price)}</td>
+                    <td data-label="الإجمالي">{formatMoney(it.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
 
       <div className="qd-card">
         <h2>البيانات</h2>

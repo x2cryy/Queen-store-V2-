@@ -1,12 +1,42 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import "./shop-extras.css";
 import type { ProductDetail } from "../../lib/shop/product";
 import { formatPrice } from "../../lib/shop/format";
 import { CloseIcon } from "./icons";
 import { useCart } from "./CartProvider";
 
-export default function ProductView({ product }: { product: ProductDetail }) {
+function flyToCart() {
+  try {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const src = document.querySelector(".qm-gal-main") as HTMLElement | null;
+    const dst = document.querySelector(".qm-cartlink") as HTMLElement | null;
+    if (!src || !dst) return;
+    const a = src.getBoundingClientRect();
+    const b = dst.getBoundingClientRect();
+    const size = 28;
+    const dot = document.createElement("div");
+    dot.style.cssText = "position:fixed;z-index:9999;pointer-events:none;left:0;top:0;border-radius:999px;background:#B89B6A;box-shadow:0 2px 10px rgba(0,0,0,.25);width:" + size + "px;height:" + size + "px;";
+    document.body.appendChild(dot);
+    const ay = Math.min(Math.max(a.top + a.height / 2, 40), window.innerHeight - 40);
+    const x1 = a.left + a.width / 2 - size / 2;
+    const y1 = ay - size / 2;
+    const x2 = b.left + b.width / 2 - size / 2;
+    const y2 = b.top + b.height / 2 - size / 2;
+    const an = dot.animate(
+      [
+        { transform: `translate(${x1}px,${y1}px) scale(1)`, opacity: 1 },
+        { transform: `translate(${x2}px,${y2}px) scale(0.3)`, opacity: 0.4 },
+      ],
+      { duration: 500, easing: "cubic-bezier(.4,0,.2,1)" }
+    );
+    an.onfinish = () => dot.remove();
+  } catch {}
+}
+
+import FavButton from "./FavButton";
+export default function ProductView({ product, related }: { product: ProductDetail; related?: ReactNode }) {
   const { options, variants, images } = product;
   const hasOptions = options.length > 0 && variants.length > 0;
   const { addItem } = useCart();
@@ -16,6 +46,7 @@ export default function ProductView({ product }: { product: ProductDetail }) {
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [tab, setTab] = useState<"desc" | "specs" | "reviews">("desc");
 
   const variant = useMemo(() => {
     if (!hasOptions || !options.every((o) => sel[o.id])) return null;
@@ -115,12 +146,19 @@ export default function ProductView({ product }: { product: ProductDetail }) {
       stock
     );
     setNote(res.message);
+    if ((res as unknown as { ok?: boolean }).ok !== false) flyToCart();
   }
 
   const cur = images[active] ?? images[0];
   const canBuy = needPick || stock > 0;
+  const specs: [string, string][] = [];
+  if (product.brand) specs.push(["العلامة التجارية", product.brand]);
+  if (variant?.sku) specs.push(["رقم المنتج", variant.sku]);
+  for (const o of options) specs.push([o.name, o.values.map((v) => v.label).join("، ")]);
+  specs.push(["التوفر", stockLabel]);
 
   return (
+    <>
     <div className="qm-pdp">
       <div className="qm-gal">
         <div className="qm-gal-main">
@@ -161,6 +199,11 @@ export default function ProductView({ product }: { product: ProductDetail }) {
       <div className="qm-info">
         {product.brand ? <p className="qm-brand">{product.brand}</p> : null}
         <h1>{product.name}</h1>
+          <a href="#qm-tabs" className="qm-rate" onClick={() => setTab("reviews")}>
+            <span aria-hidden="true" style={{ color: "#b8975a" }}>☆☆☆☆☆</span>
+            <span>لا توجد تقييمات بعد</span>
+          </a>
+        <FavButton slug={product.slug} />
         <div className="qm-pdp-price">
           <strong>{formatPrice(price)}</strong>
           {compareAt && compareAt > price ? <s>{formatPrice(compareAt)}</s> : null}
@@ -283,5 +326,32 @@ export default function ProductView({ product }: { product: ProductDetail }) {
         </div>
       )}
     </div>
+    <section className="qm-tabs" id="qm-tabs">
+      <div className="qm-tablist" role="tablist">
+        {([["desc", "الوصف"], ["specs", "المواصفات"], ["reviews", "التقييمات"]] as const).map(([k, l]) => (
+          <button key={k} type="button" role="tab" aria-selected={tab === k} className={`qm-tab${tab === k ? " on" : ""}`} onClick={() => setTab(k)}>{l}</button>
+        ))}
+      </div>
+      <div className="qm-tabpanel" role="tabpanel">
+        {tab === "desc" ? (product.description ? <p className="qm-desc">{product.description}</p> : <p className="qm-note">لا يوجد وصف لهذا المنتج.</p>) : null}
+        {tab === "specs" ? (
+          <dl className="qm-specs">
+            {specs.map(([k, v]) => (
+              <div key={k}><dt>{k}</dt><dd>{v}</dd></div>
+            ))}
+          </dl>
+        ) : null}
+        {tab === "reviews" ? <p className="qm-note">لا توجد تقييمات بعد.</p> : null}
+      </div>
+    </section>
+    {related}
+    <div className="qm-sticky-spacer" />
+    <div className="qm-sticky">
+      <strong>{formatPrice(price)}</strong>
+      <button type="button" className="qm-btn qm-btn-gold" disabled={!canBuy} onClick={add}>
+        {canBuy ? "أضف إلى السلة" : "غير متوفر"}
+      </button>
+    </div>
+    </>
   );
 }

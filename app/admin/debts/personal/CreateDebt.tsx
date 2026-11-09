@@ -9,6 +9,7 @@ import type { DebtResult } from "../../../../lib/finance/debt-result";
 import { PAY_METHODS, newIdem } from "../../../../lib/finance/types";
 import { formatMoney } from "../../../../lib/admin/format";
 import { toDigits, todayIQ } from "../../../../lib/finance/debt-labels";
+import ItemsEditor from "../_ui/ItemsEditor";
 
 const num = (v: string) => Number(toDigits(v).replace(/[,\s٬]/g, "")) || 0;
 
@@ -86,6 +87,7 @@ function CreateForm() {
             <input className="qd-input" name="paid" inputMode="numeric" dir="ltr" autoComplete="off" value={paid} onChange={(e) => setPaid(toDigits(e.target.value))} />
           </label>
         </div>
+        <ItemsEditor onTotal={(t) => setAmount(String(t))} />
         {total > 0 && paidN <= total ? (
           <p className="qd-hint">المتبقي بعد الحفظ: {formatMoney(total - paidN)}</p>
         ) : null}

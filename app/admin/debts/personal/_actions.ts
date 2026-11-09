@@ -64,6 +64,28 @@ export async function createDebtAction(_: DebtState, f: FormData): Promise<DebtS
   const idem = str(f, "idem");
   if (idem.length < 8 || idem.length > 80) return fail("انتهت صلاحية النموذج، أعد فتحه.");
 
+  let items: { name: string; qty: number; price: number; total: number }[] = [];
+  const rawItems = str(f, "items");
+  if (rawItems) {
+    try {
+      const arr = JSON.parse(rawItems);
+      if (!Array.isArray(arr) || arr.length > 30) return fail("تفاصيل الأغراض غير صالحة.");
+      for (const r of arr) {
+        const name = String(r?.name ?? "").trim().slice(0, 120);
+        const qty = Number(r?.qty);
+        const price = Number(r?.price);
+        if (!name || !Number.isInteger(qty) || qty <= 0 || !Number.isInteger(price) || price < 0)
+          return fail("تفاصيل الأغراض غير صالحة.");
+        items.push({ name, qty, price, total: qty * price });
+      }
+    } catch {
+      return fail("تفاصيل الأغراض غير صالحة.");
+    }
+    const itemsSum = items.reduce((a, r) => a + r.total, 0);
+    if (items.length && itemsSum !== amount)
+      return fail("مجموع الأغراض لا يطابق المبلغ الإجمالي.");
+  }
+
   const s = await createClient();
   const { data, error } = await s.rpc("add_personal_debt_with_payment", {
     p_party: party,
@@ -82,6 +104,10 @@ export async function createDebtAction(_: DebtState, f: FormData): Promise<DebtS
   });
   if (error) return friendly(error.message);
   revalidatePath("/admin/debts/personal");
+  if (items.length) {
+    const { error: ie } = await s.from("personal_debts").update({ items }).eq("id", String(data));
+    if (ie) return { ok: true, message: "تم حفظ الدين لكن تعذر حفظ تفاصيل الأغراض.", id: String(data) };
+  }
   return { ok: true, message: "تم حفظ الدين", id: String(data) };
 }
 

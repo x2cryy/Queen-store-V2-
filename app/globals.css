@@ -221,3 +221,33 @@
 /* QM5-END */
 
 @media (min-width:700px){.qm-fgrid.qm-fgrid-4{grid-template-columns:2fr 1fr 1fr 1fr}}
+@keyframes qmBump{0%{transform:scale(.5)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+.qm-badge{animation:qmBump .35s ease-out}
+@media (prefers-reduced-motion:reduce){.qm-badge{animation:none}}
+
+/* Phase 6: storefront polish (CSS only) */
+.qm-card{height:100%;animation:qmFade .35s ease-out both;transition:border-color .2s,transform .15s}
+.qm-card:active{transform:scale(.985)}
+.qm-card-img{aspect-ratio:1/1}
+.qm-card-body .qm-view{margin-top:auto}
+.qm-sec-h{gap:12px}
+.qm-more{white-space:nowrap;padding:6px 0}
+@keyframes qmFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.qm-card{animation:none;transition:none}}
+
+/* QM-HOME-CATS v1 */
+.qm-home-cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,160px));gap:14px;justify-content:start;align-items:stretch}
+.qm-home-cats .qm-cat{text-decoration:none;color:var(--ink);font-size:14px;text-align:center}
+@media (max-width:600px){.qm-home-cats{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}}
+
+/* QM-HOME-V2 */
+.qm-home-cats{display:grid !important;grid-template-columns:repeat(auto-fill,minmax(130px,160px)) !important;justify-content:start !important;justify-items:stretch !important;gap:14px !important}
+.qm-home-cats > .qm-cat{width:auto !important;max-width:160px !important;margin:0 !important}
+.qh-hero{height:clamp(260px,36vh,340px) !important;min-height:0 !important;max-height:340px !important}
+.qh-t1{font-size:clamp(24px,3vw,36px) !important;line-height:1.3 !important}
+.qh-t2{font-size:clamp(20px,2.6vw,30px) !important;line-height:1.3 !important}
+.qh-t3{font-size:14px !important;margin-top:6px !important}
+.qh-btn{padding:10px 22px !important}
+.qm-cats-d{gap:36px !important;padding-top:6px !important;padding-bottom:14px !important}
+.qm-cats-d a{font-size:18px !important;font-weight:600 !important;color:var(--ink) !important;text-decoration:none}
+.qm-cats-d a:hover{color:var(--gold) !important}

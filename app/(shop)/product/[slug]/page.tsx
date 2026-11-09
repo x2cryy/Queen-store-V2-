@@ -1,3 +1,4 @@
+import RelatedProducts from "../../../../components/shop/RelatedProducts";
 import ProductChatLink from "../../../../components/chat/ProductChatLink";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -86,7 +87,7 @@ export default async function ProductPage({ params }: Props) {
         <span>{product.name}</span>
       </nav>
 
-      <ProductView product={product} />
+      <ProductView product={product} related={<RelatedProducts categoryId={product.categoryId} excludeId={product.id} />} />
 
       {(product.description || product.brand || cat) && (
         <section className="qm-sec" aria-label="تفاصيل المنتج">

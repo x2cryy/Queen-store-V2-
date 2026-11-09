@@ -5,6 +5,7 @@ import Header from "../../components/shop/Header";
 import Footer from "../../components/shop/Footer";
 import CartProvider from "../../components/shop/CartProvider";
 import "../_styles/queen-orders.css";
+import "../_styles/queen-shop.css";
 import { getCategories, type Category } from "../../lib/shop/queries";
 import { getSiteContent } from "../../lib/shop/site-content";
 

@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const slug = sp.get("slug");
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
-  if (!user) return NextResponse.redirect(new URL("/login", req.url));
+  if (!user) { const nx = req.nextUrl.pathname + req.nextUrl.search; return NextResponse.redirect(new URL("/login?next=" + encodeURIComponent(nx), req.url)); }
   if (!product && slug && slug.length <= 200) {
     const { data: p } = await sb.from("products").select("id").eq("slug", slug).maybeSingle();
     product = p?.id ?? null;

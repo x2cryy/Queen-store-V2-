@@ -44,7 +44,7 @@ export default function SearchBox() {
           .neq("status", "hidden")
           .or(`name.ilike."%${t}%",brand.ilike."%${t}%"`)
           .order("created_at", { ascending: false })
-          .limit(6);
+          .limit(24);
         if (!live) return;
         if (error) throw error;
         const rows = (data ?? []) as unknown as Row[];

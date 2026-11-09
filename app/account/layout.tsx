@@ -1,4 +1,5 @@
 import "../_styles/queen-auth.css";
+import "./account-extras.css";
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   return (

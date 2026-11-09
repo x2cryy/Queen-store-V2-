@@ -63,3 +63,5 @@ html .qd-page .qd-sum:has(>.qd-stat:nth-child(5))>.qd-stat:not([data-active="tru
 html .qd-page .qd-sum:has(>.qd-stat:nth-child(5))>.qd-stat:not([data-active="true"]):nth-child(5){--qs-c:var(--st-red)}
 html .qd-page .qd-sum>.qd-stat[style*="--qs-c"],html .qd-page .qd-sum>.qd-stat:not([data-active="true"]){border-color:color-mix(in srgb,var(--qs-c,var(--qd-line)) 60%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--qs-c,transparent) 30%,transparent)}
 html .qd-page .qd-sum>.qd-stat[data-tone="danger"]{--qs-c:var(--st-red)}
+
+

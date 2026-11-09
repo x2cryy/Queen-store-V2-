@@ -132,6 +132,15 @@ export default function PwaClient() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!installEvt && !showIos) return;
+    const t = setTimeout(() => {
+      markDismissed();
+      setHideInstall(true);
+    }, 12000);
+    return () => clearTimeout(t);
+  }, [installEvt, showIos]);
+
   if (busy) return null;
 
   if (waiting) {

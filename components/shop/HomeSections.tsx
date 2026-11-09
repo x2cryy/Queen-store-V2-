@@ -31,9 +31,9 @@ export default function HomeSections({
             <h2>{title("categories")}</h2>
             <Link href="/categories" className="qm-more">كل الأقسام</Link>
           </div>
-          <div className="qm-cats">
+          <div className="qm-home-cats">
             {top.map((c) => (
-              <Link key={c.id} href={`/category/${encodeURIComponent(c.slug)}`} className="qm-cat">
+              <Link key={c.id} href={`/category/${encodeURIComponent(c.slug)}`} className="qm-cat qm-cat-card">
                 <span className="qm-cat-ico">{c.name.trim().charAt(0)}</span>
                 {c.name}
               </Link>

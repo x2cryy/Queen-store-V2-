@@ -1,46 +1,46 @@
-import Link from "next/link";
-import type { Banner } from "../../lib/shop/queries";
-import { publicImageUrl, safeHref } from "../../lib/shop/images";
+"use client";
 
-export default function Hero({
-  banners,
-  imageOf,
-}: {
-  banners: Banner[];
-  imageOf?: (b: Banner) => string | null;
-}) {
-  if (banners.length === 0) {
-    return (
-      <section className="qm-hero qm-hero-plain">
-        <div className="qm-wrap">
-          <p className="qm-logo qm-hero-logo">QUEEN STORE</p>
-          <Link href="/products" className="qm-btn qm-btn-gold">تسوق الآن</Link>
-        </div>
-      </section>
-    );
-  }
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+const SLIDES = [
+  { src: "/hero/hero-1.jpeg", a: "أزياء وإكسسوارات", b: "بلمسة هادئة وأنيقة" },
+  { src: "/hero/hero-2.jpeg", a: "عطور وإكسسوارات", b: "تفاصيل تكمّل أناقتك" },
+  { src: "/hero/hero-3.jpeg", a: "كل ما تحتاجينه", b: "بذوق راقٍ وجودة عالية" },
+];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default function Hero(_props: { banners?: unknown; imageOf?: (b: any) => string | null }) {
+  const [i, setI] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setI((v) => (v + 1) % SLIDES.length), 2000);
+    return () => clearInterval(t);
+  }, []);
+
   return (
-    <section className="qm-hero" aria-label="العروض">
-      <div className="qm-slides">
-        {banners.map((b, i) => {
-          const src = imageOf ? imageOf(b) : publicImageUrl("banners", b.image_path);
-          const href = safeHref(b.link_url) ?? "/products";
-          const Title = i === 0 ? "h1" : "h2";
-          return (
-            <div className="qm-slide" key={b.id}>
-              {src ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={src} alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
-              ) : null}
-              <div className="qm-slide-shade" />
-              <div className="qm-wrap qm-slide-body">
-                {b.title ? <Title>{b.title}</Title> : null}
-                {b.subtitle ? <p>{b.subtitle}</p> : null}
-                <Link href={href} className="qm-btn qm-btn-gold">تسوق الآن</Link>
-              </div>
-            </div>
-          );
-        })}
+    <section className="qh-hero" aria-label="العروض">
+      {SLIDES.map((s, n) => (
+        <div key={s.src} className={n === i ? "qh-slide qh-on" : "qh-slide"}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={s.src} alt="" className="qh-img" />
+          <div className="qh-shade" />
+          <div className="qh-text">
+            {n === i ? (
+              <>
+                <h1 className="qh-t1">{s.a}</h1>
+                <p className="qh-t2">{s.b}</p>
+                <p className="qh-t3">تشكيلة مختارة من الأزياء والإكسسوارات والمنتجات المتنوعة.</p>
+                <Link href="/products" className="qh-btn">تصفّح المنتجات</Link>
+              </>
+            ) : null}
+          </div>
+        </div>
+      ))}
+      <div className="qh-dots">
+        {SLIDES.map((s, n) => (
+          <button key={s.src} type="button" aria-label={`صورة ${n + 1}`} onClick={() => setI(n)} className={n === i ? "qh-dot qh-dot-on" : "qh-dot"} />
+        ))}
       </div>
     </section>
   );

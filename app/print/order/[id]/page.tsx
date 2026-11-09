@@ -121,7 +121,7 @@ export default async function PrintOrderPage({ params }: { params: Promise<{ id:
       </div>
       <div className="qp-top">
         <div>
-          <h1>QUEEN STORE</h1>
+          <h1 style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><img src="/brand/q-mark.svg" alt="" style={{ height: 32, width: "auto" }} />QUEEN STORE</h1>
           <p style={{ margin: 0 }}>فاتورة طلب</p>
         </div>
         <div style={{ textAlign: "end" }}>

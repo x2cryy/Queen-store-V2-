@@ -14,7 +14,7 @@ export default function CartLink() {
       aria-label={n > 0 ? `السلة، ${n} قطعة` : "السلة"}
     >
       <BagIcon />
-      {n > 0 ? <span className="qm-badge">{n > 99 ? "99+" : n}</span> : null}
+      {n > 0 ? <span key={n} className="qm-badge">{n > 99 ? "99+" : n}</span> : null}
     </Link>
   );
 }

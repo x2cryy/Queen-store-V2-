@@ -1,4 +1,8 @@
 import Hero from "../../components/shop/Hero";
+import TrustBar from "../../components/shop/TrustBar";
+import Deals from "../../components/shop/Deals";
+import ProductCard from "../../components/shop/ProductCard";
+import "../../components/shop/shop-extras.css";
 import HomeSections from "../../components/shop/HomeSections";
 import {
   getBanners,
@@ -42,8 +46,30 @@ export default async function Home() {
   return (
     <>
       <Hero banners={banners} />
+        <TrustBar />
 
       <HomeSections sections={content.sections} cats={cats} featured={featured} latest={latest} />
+
+        {featured.length > 0 && (
+          <Deals title="عروض اليوم">
+            {featured.slice(0, 4).map((p) => (
+              <ProductCard key={"d" + p.id} p={p} />
+            ))}
+          </Deals>
+        )}
+
+        {featured.length > 0 && (
+          <section className="qm-sec qm-wrap" aria-label="الأكثر مبيعاً">
+            <div className="qm-sec-h">
+              <h2>الأكثر مبيعاً</h2>
+            </div>
+            <div className="qm-grid">
+              {(featured.length > 4 ? featured.slice(4, 8) : featured.slice(0, 4)).map((p) => (
+                <ProductCard key={"b" + p.id} p={p} />
+              ))}
+            </div>
+          </section>
+        )}
 
       {noProducts && (
         <div className="qm-wrap">

@@ -51,6 +51,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </p>
         </div>
         <div className="qd-actions">
+          <Link href={"/print/debt/store/" + d.id} target="_blank" rel="noopener noreferrer" className="qd-btn">كشف الدين</Link>
           {!cancelled && left > 0 ? <PayDebt action={payStoreDebtAction} debtId={d.id} party={d.party_name} direction={d.direction} remaining={left} /> : null}
           {!cancelled ? <EditStoreDebt d={{ id: d.id, party_name: d.party_name, due_date: d.due_date, debt_date: d.debt_date, reason: d.reason, notes: d.notes, linked: !!d.customer_id || !!d.order_id }} /> : null}
         </div>
@@ -85,6 +86,26 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         {d.notes ? <div className="qd-kv"><span>الملاحظات</span><span>{d.notes}</span></div> : null}
       </div>
 
+        {Array.isArray(d.items) && d.items.length > 0 ? (
+          <div className="qd-card">
+            <h2>تفاصيل الأغراض</h2>
+            <table className="ds-table">
+              <thead>
+                <tr><th>المادة</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr>
+              </thead>
+              <tbody>
+                {d.items.map((it, i) => (
+                  <tr key={i}>
+                    <td data-label="المادة">{it.name}</td>
+                    <td data-label="الكمية">{it.qty}</td>
+                    <td data-label="سعر الوحدة">{formatMoney(it.price)}</td>
+                    <td data-label="الإجمالي">{formatMoney(it.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
       <div className="qd-card">
         <h2>سجل الدفعات</h2>
         {error ? <div className="qd-msg" data-tone="err" role="alert">تعذر تحميل الدفعات.</div> : null}

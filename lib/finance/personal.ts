@@ -76,7 +76,7 @@ export async function getPersonalSummary(): Promise<PersonalSummary | null> {
   return data as unknown as PersonalSummary;
 }
 
-export type PersonalDetail = PersonalRow & { party_phone: string | null; notes: string | null; created_at: string };
+export type PersonalDetail = PersonalRow & { party_phone: string | null; notes: string | null; created_at: string; items: { name: string; qty: number; price: number; total: number }[] | null };
 export type PersonalPayment = {
   id: string;
   amount: number;
@@ -100,7 +100,7 @@ export async function getPersonalDebtDetail(id: string) {
   const { data: debt, error } = await s
     .from("personal_debts")
     .select(
-      "id, party_name, party_phone, direction, original_amount, paid_amount, remaining_amount, debt_date, due_date, reason, notes, status, created_at",
+      "id, party_name, party_phone, direction, original_amount, paid_amount, remaining_amount, debt_date, due_date, reason, notes, status, created_at, items",
     )
     .eq("id", id)
     .maybeSingle();

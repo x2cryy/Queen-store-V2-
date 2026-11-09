@@ -7,6 +7,7 @@ import { useFormAction } from "../_ui/useFormAction";
 import { createStoreDebtAction } from "./_actions";
 import type { DebtResult } from "../../../../lib/finance/debt-result";
 import { toDigits, todayIQ } from "../../../../lib/finance/debt-labels";
+import ItemsEditor from "../_ui/ItemsEditor";
 
 type Cust = { id: string; full_name: string; phone: string | null };
 const num = (v: string) => Number(toDigits(v).replace(/[,\s٬]/g, "")) || 0;
@@ -73,6 +74,7 @@ function CreateForm({ customers }: { customers: Cust[] }) {
         <label className="qd-field">المبلغ (د.ع)
           <input className="qd-input" name="amount" inputMode="numeric" dir="ltr" autoComplete="off" value={amount} onChange={(e) => setAmount(toDigits(e.target.value))} required />
         </label>
+        <ItemsEditor onTotal={(t) => setAmount(String(t))} />
       </fieldset>
 
       <fieldset className="qd-sec">

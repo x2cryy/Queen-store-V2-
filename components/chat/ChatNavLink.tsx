@@ -25,9 +25,8 @@ export default function ChatNavLink({ className = "" }: { className?: string }) 
       .subscribe();
     return () => { on = false; clearTimeout(t); sb.removeChannel(ch); };
   }, [sb]);
-  if (!authed) return null;
   return (
-    <a href="/chats" aria-label="محادثاتي" className={`relative inline-flex items-center gap-1.5 ${className}`}>
+    <a href={authed ? "/chats" : "/login?next=%2Fchats"} aria-label="محادثاتي" className={`relative inline-flex items-center gap-1.5 ${className}`}>
       <MessageCircle size={20} />
       <span className="text-sm">محادثاتي</span>
       {n > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[#B89B6A] px-1.5 text-[11px] font-semibold text-[#17140F]" dir="ltr">{n}</span>}

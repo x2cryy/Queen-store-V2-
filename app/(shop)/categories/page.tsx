@@ -1,3 +1,4 @@
+import "../../../components/shop/shop-extras.css";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getCategories } from "../../../lib/shop/queries";

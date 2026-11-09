@@ -10,6 +10,7 @@ import { OrderCard, ProductCard, ReceiptCard } from "./Cards";
 
 const PAGE = 30;
 type Props = {
+  productId?: string | null;
   chatId: string; role: Role; meId: string; folderUid: string | null; customerId?: string | null;
   title: string; subtitle?: string; closed?: boolean; backHref?: string; onBack?: () => void; backClassName?: string;
 };
@@ -89,7 +90,7 @@ function Picker({ kind, role, customerId, onPick, onClose }: { kind: "product" |
   );
 }
 
-export default function ChatRoom({ chatId, role, meId, folderUid, customerId, title, subtitle, closed, backHref, onBack, backClassName }: Props) {
+export default function ChatRoom({ chatId, role, meId, folderUid, customerId, productId, title, subtitle, closed, backHref, onBack, backClassName }: Props) {
   const router = useRouter();
   const sb = useMemo(() => createClient(), []);
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
@@ -358,6 +359,18 @@ export default function ChatRoom({ chatId, role, meId, folderUid, customerId, ti
   const back = () => { if (onBack) onBack(); else if (backHref) router.push(backHref); };
   const hasBack = !!(onBack || backHref);
 
+  const autoCard = useRef(false);
+  useEffect(() => {
+    if (autoCard.current || loading || !productId || role !== "customer" || closedForMe) return;
+    const t = setTimeout(() => {
+      if (autoCard.current) return;
+      autoCard.current = true;
+      if (!msgs.some((m) => m.product_id === productId)) share("product", productId);
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, productId, role, closedForMe, msgs]);
+
   return (
     <div dir="rtl" className="flex h-full min-h-0 w-full flex-col bg-[#FBF7EF] text-[#17140F]">
       <header className="flex items-center gap-3 border-b border-[#B89B6A]/30 bg-white px-3 py-2.5">
@@ -404,6 +417,13 @@ export default function ChatRoom({ chatId, role, meId, folderUid, customerId, ti
         {err && <div className="mb-2 flex items-start justify-between gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"><span>{err}</span><button onClick={() => setErr(null)} aria-label="إغلاق"><X size={16} /></button></div>}
         {closedForMe ? <p className="py-2 text-center text-sm text-[#7D6335]">هذه المحادثة مغلقة. يمكنك بدء محادثة جديدة من صفحة المحادثات.</p> : (
           <>
+            {productId && role === "customer" && !text && (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {["هل هذا المنتج متوفر؟", "كم سعره؟", "هل تتوفر ألوان أو مقاسات أخرى؟", "أريد تفاصيل أكثر عنه"].map((q) => (
+                  <button key={q} type="button" onClick={() => { setText(q); taRef.current?.focus(); }} className="rounded-full border border-[#B89B6A] px-3 py-1 text-xs text-[#7D6335]">{q}</button>
+                ))}
+              </div>
+            )}
             {picker && <Picker kind={picker} role={role} customerId={customerId} onPick={(id) => share(picker, id)} onClose={() => setPicker(null)} />}
             {imgPrev && (
               <div className="mb-2 flex items-center gap-3 rounded-xl bg-[#FBF7EF] p-2">

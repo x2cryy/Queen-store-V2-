@@ -1,5 +1,6 @@
 "use server";
 
+import { getQiEnabled } from "../../../lib/shop/qi";
 import { createClient } from "../../../lib/supabase/server";
 import { rateLimit } from "../../../lib/auth/rate-limit";
 import {
@@ -77,6 +78,14 @@ export async function placeOrder(
     return { ok: false, message: "محاولات كثيرة. انتظر قليلاً ثم أعد المحاولة.", values };
   }
 
+  if (values.payment_method === "qi_card" && !(await getQiEnabled())) {
+    return {
+      ok: false,
+      message: "الدفع عبر Qi Card غير مفعّل حالياً، اختر طريقة دفع أخرى.",
+      fieldErrors: { payment_method: "اختر طريقة دفع أخرى." },
+      values,
+    };
+  }
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_order", {
     p_idempotency_key: key,

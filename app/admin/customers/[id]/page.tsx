@@ -38,6 +38,7 @@ type D = {
   remaining_amount: number;
   due_date: string | null;
   status: string | null;
+  order_id?: string | null;
 };
 type I = {
   direction: string | null;
@@ -48,6 +49,7 @@ type I = {
   remaining_amount: number;
   status: string | null;
   start_date: string | null;
+  order_id?: string | null;
 };
 type Fav = { id: string; product_id: string; created_at: string };
 type Log = { id: number; action: string; entity_type: string | null; created_at: string };
@@ -125,13 +127,13 @@ export default async function Page({
     sb.rpc("admin_customer_purchases", { p_customer_id: id, p_limit: PAGE, p_offset: (pp - 1) * PAGE }),
     sb
       .from("store_debts")
-      .select("id,direction,reason,original_amount,paid_amount,remaining_amount,due_date,status")
+      .select("id,direction,reason,original_amount,paid_amount,remaining_amount,due_date,status,order_id")
       .eq("customer_id", id)
       .order("created_at", { ascending: false })
       .limit(100),
     sb
       .from("installments")
-      .select("id,title,direction,total_amount,paid_amount,remaining_amount,status,start_date")
+      .select("id,title,direction,total_amount,paid_amount,remaining_amount,status,start_date,order_id")
       .eq("customer_id", id)
       .order("created_at", { ascending: false })
       .limit(100),
@@ -231,6 +233,9 @@ export default async function Page({
   if (sum && sum.orders_returned > 0)
     orderHints.push(`مرتجعة: ${fmtNum(sum.orders_returned)} (${fmtIQD(sum.returned_total)})`);
 
+  const owedDebts = debts.filter((d) => d.direction === "receivable" && d.status !== "cancelled");
+  const owedInsts = insts.filter((x) => x.direction === "receivable" && x.status !== "cancelled");
+  const debtByOrder = new Map(debts.filter((d) => d.order_id).map((d) => [d.order_id as string, d]));
   const tabs = [
     {
       key: "overview",
@@ -250,6 +255,14 @@ export default async function Page({
                 },
                 { label: "أول تعامل موثق", value: fmtDate(firstAt) },
                 { label: "آخر طلب", value: sum.last_order_at ? fmtDate(sum.last_order_at) : "-" },
+                ...(canFinance
+                  ? [
+                      { label: "المسدد من الديون والأقساط", value: fmtIQD(owedDebts.reduce((a, d) => a + Number(d.paid_amount), 0) + owedInsts.reduce((a, x) => a + Number(x.paid_amount), 0)) },
+                      { label: "المتبقي على العميل", value: fmtIQD(owedDebts.reduce((a, d) => a + Number(d.remaining_amount), 0) + owedInsts.reduce((a, x) => a + Number(x.remaining_amount), 0)) },
+                      { label: "عدد الديون", value: fmtNum(debts.length) },
+                      { label: "عدد الأقساط", value: fmtNum(insts.length) },
+                    ]
+                  : []),
               ]}
             />
           )}
@@ -279,7 +292,7 @@ export default async function Page({
               <>
                 <table className="ds-table">
                   <thead>
-                    <tr><th>رقم الطلب</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th>الدفع</th></tr>
+                    <tr><th>رقم الطلب</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th>الدفع</th><th>الدين</th></tr>
                   </thead>
                   <tbody>
                     {orders.map((o) => (
@@ -291,6 +304,7 @@ export default async function Page({
                         <td data-label="الإجمالي">{fmtIQD(o.total)}</td>
                         <td data-label="الحالة"><Badge>{o.status}</Badge></td>
                         <td data-label="الدفع"><Badge>{o.payment_status ?? "-"}</Badge></td>
+                        <td data-label="الدين">{canFinance && debtByOrder.get(o.id) ? `${fmtIQD(Number(debtByOrder.get(o.id)?.paid_amount ?? 0))} / ${fmtIQD(Number(debtByOrder.get(o.id)?.remaining_amount ?? 0))}` : "-"}</td>
                       </tr>
                     ))}
                   </tbody>

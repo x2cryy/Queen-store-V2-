@@ -61,6 +61,7 @@ export default async function Page({
     .limit(200);
   const coupons = (data ?? []) as Coupon[];
   const now = Date.now();
+  const { data: usageRows } = await supabase.from("orders").select("id, order_number, customer_name, coupon_code, discount_total, created_at").not("coupon_code", "is", null).order("created_at", { ascending: false }).limit(100);
 
   return (
     <section>
@@ -106,6 +107,20 @@ export default async function Page({
         </form>
       </div>
 
+      <div className="qa-row" style={{ flexWrap: "wrap", gap: 10 }}>
+        {[
+          { l: "فعالة", v: coupons.filter((c) => statusOf(c, now).label === "فعال").length },
+          { l: "مجدولة", v: coupons.filter((c) => statusOf(c, now).label === "لم يبدأ").length },
+          { l: "منتهية", v: coupons.filter((c) => statusOf(c, now).label === "منتهي").length },
+          { l: "مرات الاستخدام", v: coupons.reduce((a, c) => a + (c.used_count || 0), 0) },
+        ].map((k) => (
+          <div key={k.l} className="qa-card" style={{ flex: "1 1 130px", minWidth: 0 }}>
+            <p className="qa-muted">{k.l}</p>
+            <strong>{k.v}</strong>
+          </div>
+        ))}
+      </div>
+
       <h2 className="qa-h2">الكوبونات</h2>
       {coupons.length === 0 && <p className="qa-lead">لا توجد كوبونات بعد.</p>}
 
@@ -132,6 +147,20 @@ export default async function Page({
             <p className="qa-muted">
               من {fmtDate(c.starts_at)} إلى {fmtDate(c.ends_at)}
             </p>
+              {(() => {
+                const rows = (usageRows ?? []).filter((r) => String(r.coupon_code).toUpperCase() === c.code.toUpperCase());
+                if (rows.length === 0) return null;
+                return (
+                  <details>
+                    <summary className="qa-muted">سجل الاستخدام ({rows.length})</summary>
+                    {rows.slice(0, 10).map((r) => (
+                      <p key={r.id} className="qa-muted">
+                        {r.customer_name} · #{r.order_number} · {fmtDate(r.created_at)} · خصم {formatPrice(Number(r.discount_total))}
+                      </p>
+                    ))}
+                  </details>
+                );
+              })()}
             <form action={toggleCouponAction} className="qa-row">
               <input type="hidden" name="id" value={c.id} />
               <input type="hidden" name="active" value={c.is_active ? "false" : "true"} />

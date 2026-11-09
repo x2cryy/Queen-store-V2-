@@ -1,20 +1,20 @@
 /* QUEEN STORE — account screens.
    Brand colors are CSS variables on .q-root: replace them with the approved palette. */
 .q-root {
-  --q-bg: #f5f3f6;
+  --q-bg: #FBF7EF;
   --q-surface: #ffffff;
-  --q-ink: #2a1f33;
-  --q-muted: #6d6476;
-  --q-line: #e4dfe9;
-  --q-brand: #4b2f5e;
-  --q-brand-hover: #3d254d;
+  --q-ink: #17140F;
+  --q-muted: #6B6254;
+  --q-line: #EDE4D2;
+  --q-brand: #17140F;
+  --q-brand-hover: #17140F;
   --q-brand-ink: #ffffff;
-  --q-gold: #b9936c;
+  --q-gold: #B89B6A;
   --q-danger: #9f2a2a;
   --q-danger-bg: #fbeded;
   --q-ok: #2c6a41;
   --q-ok-bg: #ecf5ee;
-  --q-info-bg: #f0ecf4;
+  --q-info-bg: #F3ECDD;
 
   box-sizing: border-box;
   min-height: 100dvh;
@@ -64,12 +64,12 @@
   font-size: 16px;
   color: var(--q-ink);
   background: #fff;
-  border: 1px solid #cfc7d8;
+  border: 1px solid #E6DCC8;
   border-radius: 10px;
 }
 .q-field input:focus-visible { outline: 3px solid rgba(75, 47, 94, 0.28); outline-offset: 1px; border-color: var(--q-brand); }
 .q-field input[aria-invalid="true"] { border-color: var(--q-danger); }
-.q-field input[readonly] { background: #f7f5f9; color: var(--q-muted); }
+.q-field input[readonly] { background: #FAF5EA; color: var(--q-muted); }
 .q-ltr { direction: ltr; text-align: right; }
 .q-hint { margin: 6px 0 0; font-size: 0.85rem; color: var(--q-muted); }
 .q-error { margin: 6px 0 0; font-size: 0.87rem; color: var(--q-danger); }

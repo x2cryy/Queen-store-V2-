@@ -111,6 +111,7 @@ export type StoreDetail = {
   status: string;
   order_id: string | null;
   created_at: string;
+  items?: { name: string; qty: number; price: number; total: number }[] | null;
 };
 export type StorePayment = {
   id: string;
@@ -129,7 +130,7 @@ export async function getStoreDebtDetail(id: string) {
   const { data, error } = await s
     .from("store_debts")
     .select(
-      "id, customer_id, party_name, direction, original_amount, paid_amount, remaining_amount, debt_date, due_date, reason, notes, status, order_id, created_at",
+      "id, customer_id, party_name, direction, original_amount, paid_amount, remaining_amount, debt_date, due_date, reason, notes, status, order_id, created_at, items",
     )
     .eq("id", id)
     .maybeSingle();

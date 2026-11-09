@@ -18,6 +18,7 @@ type Debt = {
   remaining_amount: number;
   due_date: string | null;
   status: string | null;
+  order_id?: string | null;
 };
 type Inst = {
   id: string;
@@ -27,6 +28,7 @@ type Inst = {
   paid_amount: number;
   remaining_amount: number;
   status: string | null;
+  order_id?: string | null;
 };
 type Acct = {
   owed_debts_left: number;
@@ -160,6 +162,7 @@ export async function AccountPanel({
                   <th>المتبقي</th>
                   <th>الاستحقاق</th>
                   <th>الحالة</th>
+                  <th>الطلب</th>
                 </tr>
               </thead>
               <tbody>
@@ -176,6 +179,7 @@ export async function AccountPanel({
                       <td data-label="المتبقي">{fmtIQD(d.remaining_amount)}</td>
                       <td data-label="الاستحقاق">{d.due_date ? fmtDate(d.due_date) : "-"}</td>
                       <td data-label="الحالة"><Badge>{STATUS_LABEL[st] ?? st}</Badge></td>
+                      <td data-label="الطلب">{d.order_id ? <Link href={`/admin/orders/${d.order_id}`}>عرض الطلب</Link> : "يدوي"}</td>
                     </tr>
                   );
                 })}
@@ -200,6 +204,7 @@ export async function AccountPanel({
                   <th>المدفوع</th>
                   <th>المتبقي</th>
                   <th>الحالة</th>
+                  <th>الطلب</th>
                 </tr>
               </thead>
               <tbody>
@@ -211,6 +216,7 @@ export async function AccountPanel({
                     <td data-label="المدفوع">{fmtIQD(i.paid_amount)}</td>
                     <td data-label="المتبقي">{fmtIQD(i.remaining_amount)}</td>
                     <td data-label="الحالة"><Badge>{INST_STATUS[i.status ?? ""] ?? "-"}</Badge></td>
+                    <td data-label="الطلب">{i.order_id ? <Link href={`/admin/orders/${i.order_id}`}>عرض الطلب</Link> : "-"}</td>
                   </tr>
                 ))}
               </tbody>
