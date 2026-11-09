@@ -54,7 +54,7 @@ export function ProductGrid({ items, adjustHref, openHref }: { items: Item[]; ad
               <div className={st.price}>{p.priceFrom ? "يبدأ من " : ""}{fmtIQD(p.price)}</div>
               <div className={st.muted}>الكمية: {fmtNum(p.quantity)}</div>
               <div className={st.badges}>
-                {p.status === "hidden" ? <Badge>مخفي</Badge> : <Badge tone="good">منشور</Badge>}
+                {p.status === "hidden" ? <Badge>غير نشط</Badge> : <Badge tone="good">منشور</Badge>}
                 {out ? <Badge tone="bad">نافد</Badge> : low ? <Badge tone="warn">منخفض</Badge> : <Badge tone="good">متوفر</Badge>}
               </div>
               {p.variants > 0 ? (

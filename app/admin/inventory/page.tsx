@@ -75,7 +75,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<SP>
     { label: "إجمالي المنتجات", value: t.all, hint: "المنتجات الأساسية دون عدد الخيارات", href: "/admin/inventory?c=all", on: c === "all" && !v && !s },
     { label: "منخفضة المخزون", value: t.low, hint: "الكمية ضمن حد التنبيه", href: "/admin/inventory?s=low", on: s === "low" },
     { label: "نافدة", value: t.out, hint: "الكمية صفر", href: "/admin/inventory?s=out", on: s === "out" },
-    { label: "مخفية", value: t.hidden, hint: "حالة ظهور، وقد تكون نافدة أيضاً", href: "/admin/inventory?v=hidden", on: v === "hidden" },
+    { label: "غير نشطة", value: t.hidden, hint: "حالة ظهور، وقد تكون نافدة أيضاً", href: "/admin/inventory?v=hidden", on: v === "hidden" },
+    { label: "نشطة", value: t.all - t.hidden, hint: "المنتجات الظاهرة في المتجر", href: "/admin/inventory?v=shown", on: v === "shown" },
   ];
 
   const tiles: Tile[] = [
@@ -96,7 +97,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<SP>
   const title = c === "none" ? "غير مصنف" : c && c !== "all" ? (catName.get(c) ?? "التصنيف") : q ? "نتائج البحث" : "جميع المنتجات";
   const chips: { label: string; href: string }[] = [];
   if (q) chips.push({ label: `بحث: ${q}`, href: mk({ q: null, pg: null }) });
-  if (v) chips.push({ label: v === "hidden" ? "مخفي" : "منشور", href: mk({ v: null, pg: null }) });
+  if (v) chips.push({ label: v === "hidden" ? "غير نشط" : "منشور", href: mk({ v: null, pg: null }) });
   if (s) chips.push({ label: s === "low" ? "منخفض" : s === "out" ? "نافد" : "متوفر", href: mk({ s: null, pg: null }) });
   const filtered = !!(q || v || s);
 
